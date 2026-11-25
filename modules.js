@@ -50,23 +50,24 @@ const Q2M={};CATALOG.forEach(c=>c.qs.forEach(q=>Q2M[q]=c.id));
 const PRE={'A-lin':['A-dist']};
 
 /* ---------- 起點判定（與判定系統相同的標準） ---------- */
-function diagnose(s){ // s：65 個字元，c 對、w 錯、i 不會、b 沒寫到
+function diagnose(s){ // s：65 個字元，c 對、w 錯、i 不會、b 沒寫到（路線把 b 當作不會）
   const st=q=>s[q-1]||'b';
   const bands=BANDS.map(([a,b,p],g)=>{let c=0;for(let q=a;q<=b;q++)if(st(q)==='c')c++;return{g,c,n:b-a+1,pass:c>=p};});
   const f=bands.find(b=>!b.pass);const start=f?f.g:9;
   let last=0;for(let q=1;q<=65;q++)if(st(q)!=='b')last=q;
   return{start,startLabel:start>=9?'全部通過':GN[start],bands,last,correct:[...s].filter(x=>x==='c').length};
 }
-/* ---------- 路線：起點年級 → 起點以下的缺口 → 下一個年級 ---------- */
+/* ---------- 路線：答錯、寫「不會」或沒寫到的題目，對應的關卡全部開放；由低年級排到高年級 ----------
+   不看起點年級（起點只用來顯示）。目錄 CATALOG 本身就是由低年級排到高年級，同年級照目錄順序，
+   所以整數除法一定排在小數除法前面，基礎缺口排在前面。 */
 function route(s){
   const d=diagnose(s);const st=q=>s[q-1]||'b';
   const need=new Set(),miss={};
-  for(let q=1;q<=65;q++){const g=gradeOf(q),x=st(q);
-    const bad=x==='w'||x==='i'||(x==='b'&&g<=d.start+1&&q<=d.last+8);
-    if(bad&&g<=d.start+1){need.add(Q2M[q]);(miss[Q2M[q]]=miss[Q2M[q]]||[]).push(q);}}
-  const rank=m=>{const g=CAT[m].grade;return g===d.start?0:g<d.start?1:2;};
-  const ids=[...need].sort((a,b)=>rank(a)-rank(b)||CAT[a].grade-CAT[b].grade||CATALOG.indexOf(CAT[a])-CATALOG.indexOf(CAT[b]));
-  const out=[];ids.forEach(m=>{(PRE[m]||[]).forEach(p=>{if(!out.includes(p)&&!ids.includes(p))out.push(p);});if(!out.includes(m))out.push(m);});
+  for(let q=1;q<=65;q++){const x=st(q);
+    if(x==='w'||x==='i'||x==='b'){const m=Q2M[q];need.add(m);(miss[m]=miss[m]||[]).push(q);}}
+  const ord=m=>CATALOG.indexOf(CAT[m]);
+  const ids=[...need].sort((a,b)=>CAT[a].grade-CAT[b].grade||ord(a)-ord(b));
+  const out=[];ids.forEach(m=>{(PRE[m]||[]).forEach(p=>{if(!out.includes(p))out.push(p);});if(!out.includes(m))out.push(m);});
   return{diag:d,route:out,miss};
 }
 
@@ -88,7 +89,7 @@ const neg=n=>n<0?'−'+(-n):String(n);
 const sgn=n=>n<0?' − '+(-n):' + '+n;
 function norm(s){return String(s||'').trim().replace(/[０-９ａ-ｚＡ-Ｚ．＋]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/　/g,' ').replace(/[／]/g,'/').replace(/[－−–]/g,'-').replace(/[：]/g,':').replace(/[，、]/g,',').replace(/（/g,'(').replace(/）/g,')').replace(/\s+/g,' ');}
 function parseNum(s){
-  s=norm(s).replace(/^[a-z]\s*=\s*/i,'').replace(/(元|人|顆|公里|公分|平方公分|度|°)$/,'').trim();let m;
+  s=norm(s).replace(/^[a-z]\s*=\s*/i,'').replace(/\s*(元|人|顆|公里|公尺|公分|公釐|毫米|平方公分|平方公尺|立方公分|公升|毫升|度|°|分鐘|分|秒|小時|個|本|張|頁|輛|台|盒|包|條|支|枝|隻|片|次|歲|天|倍|組|cm|mm|km|m)$/i,'').trim();let m;
   if(m=s.match(/^(-?)(\d+)\s*(?:又|\s)\s*(\d+)\/(\d+)$/)){const w=+m[2],n=+m[3],d=+m[4];if(!d)return null;const v=R(w*d+n,d);return{v:m[1]?R(-v.n,v.d):v,raw:[n,d]};}
   if(m=s.match(/^(-?\d+)\/(-?\d+)$/)){if(!+m[2])return null;return{v:R(+m[1],+m[2]),raw:[+m[1],+m[2]]};}
   if(m=s.match(/^-?\d+(\.\d+)?$/)){const p=(m[1]||'.').length-1;const k=10**p;return{v:R(Math.round(parseFloat(s)*k),k),raw:null};}
@@ -757,6 +758,279 @@ MOD['G-center']={
      const [n,c,w]=pick(r,sets);const m=shuffleMC(r,c,w);return{h:`三角形的${n}有什麼性質？`,mc:m.options,ans:m.ans,key:c,hint:'外心↔頂點、內心↔邊、重心↔中線。'};},
    r=>{const k=ri(r,2,8);const toV=r()<.5;return toV?{h:`三角形的一條中線長 ${3*k}，重心到這條中線所在頂點的距離是？`,key:String(2*k),check:numCheck(R(2*k)),hint:'頂點到重心占中線的 2/3。'}:{h:`三角形的一條中線長 ${3*k}，重心到這條中線所在邊的中點的距離是？`,key:String(k),check:numCheck(R(k)),hint:'重心到中點占中線的 1/3。'};},
    r=>{const t=pick(r,[[6,8,10],[5,12,13],[8,15,17],[9,12,15],[12,16,20]]);return{h:`直角三角形的兩股長 ${t[0]}、${t[1]}，外接圓的半徑是多少？`,key:String(t[2]/2),check:numCheck(R(t[2],2)),hint:'外心在斜邊中點，半徑 = 斜邊 ÷ 2。'};}]
+};
+
+/* ================= 補齊的 9 個基礎關卡（整數、時間、長度、分數意義、周長面積、因數倍數、統計機率） ================= */
+/* ---- 這幾個關卡用到的答案檢查 ---- */
+function divCheck(q,rm,d){return str=>{const s=norm(str).replace(/^商\s*/,'').replace(/\s/g,'');
+  if(/^\d+$/.test(s)){if(+s===q&&rm===0)return{ok:true};if(+s===q)return{ok:false,note:'商對了，還要寫出餘數，格式像 7 餘 5。'};return{ok:false};}
+  const m=s.match(/^(\d+)(?:餘|\.{2,}|…+|r)(\d+)$/i);if(!m)return{ok:false,note:'看不懂這個寫法，有餘數時請寫成 7 餘 5（或 7...5）。'};
+  const a=+m[1],b=+m[2];if(a===q&&b===rm)return{ok:true};if(d&&b>=d)return{ok:false,note:`餘數 ${b} 不能比除數 ${d} 大或一樣大，代表還可以再多分一份。`};
+  if(a===q)return{ok:false,note:'商對了，餘數不對：餘數 = 被除數 − 商 × 除數。'};return{ok:false};};}
+function timeCheck(h,mi){return str=>{let s=norm(str).replace(/\s/g,'').replace(/整$/,'');const t=s.match(/^(上午|早上|中午|下午|晚上)/);if(t)s=s.slice(t[1].length);
+  const m=s.match(/^(\d{1,2})(?::|點|時)(\d{1,2})?分?$/);if(!m)return{ok:false,note:'看不懂這個寫法，請寫成 4:15 或 4 點 15 分。'};
+  const H=+m[1],M=+(m[2]||0);if(M>59)return{ok:false,note:'分鐘要小於 60，滿 60 分要換成 1 小時（這是格式問題，請再寫一次）。'};
+  if(H%12===h%12&&M===mi)return{ok:true};if(M===mi)return{ok:false,note:'分鐘對了，小時不對：分鐘加起來滿 60 有沒有進 1 小時？'};return{ok:false};};}
+function simplestCheck(v){return str=>{const p=parseNum(str);if(!p)return{ok:false,note:'看不懂這個答案的寫法，分數請寫成 3/4。'};if(!eq(p.v,v))return{ok:false};
+  if(p.raw&&gcd(p.raw[0],p.raw[1])>1)return{ok:false,note:'大小對了，但還可以再約分：分子分母還有共同的因數。'};return{ok:true};};}
+function mixedCheck(v){return str=>{const s=norm(str);const p=parseNum(s);if(!p)return{ok:false,note:'看不懂這個寫法，帶分數請寫成 3 2/5。'};if(!eq(p.v,v))return{ok:false};
+  const m=s.match(/^(\d+)\s*(?:又|\s)\s*(\d+)\/(\d+)$/);if(!m||+m[2]>=+m[3])return{ok:false,note:'數值對了，但題目要寫成帶分數的格式，例如 3 2/5。'};
+  if(gcd(+m[2],+m[3])>1)return{ok:true,note:'答對了！分數部分還可以再約分。'};return{ok:true};};}
+function improperCheck(v){return str=>{const s=norm(str);const p=parseNum(s);if(!p)return{ok:false,note:'看不懂這個寫法，假分數請寫成 17/5。'};if(!eq(p.v,v))return{ok:false};
+  if(!/^\d+\/\d+$/.test(s))return{ok:false,note:'數值對了，但題目要寫成假分數的格式，例如 17/5。'};return{ok:true};};}
+const COLN=['個位','十位','百位','千位','萬位'];
+const hm=t=>{const h=Math.floor(t/60)%24,m=t%60;return`${h<12?'上午':h===12?'中午':'下午'} ${h%12||12}:${String(m).padStart(2,'0')}`;};
+const hm12=t=>{const h=Math.floor(t/60)%24,m=t%60;return`${h%12||12}:${String(m).padStart(2,'0')}`;};
+
+/* ---------- 整數加減（進位、退位） ---------- */
+MOD['I-add']={
+  goal:'用直式算加減：同一位對齊、從個位算起，滿十進一，不夠減就向前一位借一當十。',
+  wrong:{h:'常見的錯：47 + 38 算成 715（個位 7 + 8 = 15 整個寫下去）；52 − 27 算成 35（個位不夠減，就倒過來算 7 − 2）。',why:'個位 7 + 8 = 15，只在個位寫 5，那 1 個十要「進位」加到十位：4 + 3 + 1 = 8，答案 85。減法不能倒過來減：個位 2 不夠減 7，要向十位借 1 個十（= 10 個一），12 − 7 = 5，十位剩 4，4 − 2 = 2，答案 25。'},
+  concept:['直式要個位對個位、十位對十位，從個位開始算。','加法：同一位加起來滿 10，這一位只寫個位數，向前一位進 1。','減法：同一位不夠減，向前一位借 1，這一位多 10；前一位是 0 時，要再往更前面借（例如 503 − 268）。'],
+  widget:{init:()=>({p:0,k:0}),printState:()=>({p:3,k:3}),
+    presets:[['+',47,38],['+',386,457],['−',52,27],['−',503,268]],
+    calc(op,a,b){const A=String(a).split('').reverse().map(Number),B=String(b).split('').reverse().map(Number);const cols=[];
+      if(op==='+'){const n=String(a+b).length;let c=0;for(let i=0;i<n;i++){const x=A[i]||0,y=B[i]||0,s=x+y+c;cols.push({x,y,cin:c,s,res:s%10,out:s>=10?1:0,only:i>=A.length&&i>=B.length});c=s>=10?1:0;}}
+      else{let bin=0;for(let i=0;i<A.length;i++){const x=A[i],y=B[i]||0;let cur=x-bin,bout=0;if(cur<y){cur+=10;bout=1;}cols.push({x,y,bin,cur,res:cur-y,out:bout,before:x-bin});bin=bout;}}
+      return cols;},
+    render(s){const [op,a,b]=this.presets[s.p];const cols=this.calc(op,a,b);const n=cols.length,k=Math.min(s.k,n);const X=i=>330-i*52;let g='';
+      const A=String(a).split('').reverse(),B=String(b).split('').reverse();
+      A.forEach((d,i)=>g+=`<text x="${X(i)}" y="92" font-size="32" text-anchor="middle">${d}</text>`);
+      B.forEach((d,i)=>g+=`<text x="${X(i)}" y="140" font-size="32" text-anchor="middle">${d}</text>`);
+      g+=`<text x="${X(n-1)-56}" y="140" font-size="32" text-anchor="middle">${op}</text><line x1="${X(n-1)-80}" y1="154" x2="${X(0)+30}" y2="154" stroke="#333" stroke-width="2.5"/>`;
+      for(let i=0;i<k;i++){const c=cols[i];g+=`<rect x="${X(i)-22}" y="160" width="44" height="40" rx="6" fill="${i===k-1?'#f6d7a8':'#eef3fb'}"/><text x="${X(i)}" y="192" font-size="32" font-weight="700" text-anchor="middle">${c.res}</text>`;
+        if(op==='+'&&c.out)g+=`<text x="${X(i+1)}" y="44" font-size="20" fill="#d23c3c" font-weight="700" text-anchor="middle">+1</text>`;
+        if(op!=='+'&&(c.bin||c.out))g+=`<line x1="${X(i)-12}" y1="82" x2="${X(i)+12}" y2="66" stroke="#d23c3c" stroke-width="2"/><text x="${X(i)}" y="44" font-size="20" fill="#d23c3c" font-weight="700" text-anchor="middle">${c.cur}</text>`;}
+      if(k<n)g+=`<rect x="${X(k)-24}" y="58" width="48" height="148" rx="8" fill="none" stroke="#4f8fd8" stroke-width="2.5" stroke-dasharray="6 4"/>`;
+      let msg;if(k===0)msg=`按「下一步」，從個位開始一位一位算。`;
+      else{const c=cols[k-1],nm=COLN[k-1],nx=COLN[k];
+        if(op==='+')msg=c.only?`${nm}：只有進位上來的 1，寫 1。`:`${nm}：${c.x} + ${c.y}${c.cin?' + 進位的 1':''} = ${c.s}，${c.out?`滿 10 了：寫 ${c.res}，向${nx}進 1（紅色的 +1）。`:`寫 ${c.res}。`}`;
+        else msg=`${nm}：${c.bin?`${c.x} 被右邊借走 1，剩 ${c.before}。`:''}${c.out?`${c.before} 不夠減 ${c.y}，向${nx}借 1 當 10，變成 ${c.cur}，${c.cur} − ${c.y} = ${c.res}。`:`${c.before} − ${c.y} = ${c.res}。`}`;
+        if(k===n)msg+=` 答案是 <b>${op==='+'?a+b:a-b}</b>。${op==='+'?'':`檢查：${a-b} + ${b} = ${a}。`}`;}
+      return `<svg viewBox="0 0 440 215" class="wsvg">${g}</svg><p class="wmsg">${msg}</p>`;},
+    controls(s){return `<div class="wctl"><button class="chip big" data-act="n">下一步</button><button class="chip" data-act="r">重來</button></div>
+      <div class="wctl">換一題：${this.presets.map((p,i)=>`<button class="chip" data-act="p" data-v="${i}" aria-pressed="${s.p===i}">${p[1]} ${p[0]} ${p[2]}</button>`).join('')}</div>`;},
+    act(s,a,v){if(a==='n'){const [op,x,y]=this.presets[s.p];s.k=Math.min(s.k+1,this.calc(op,x,y).length);}if(a==='r')s.k=0;if(a==='p'){s.p=+v;s.k=0;}}},
+  example:{q:'503 − 268 = ?',steps:['個位：3 不夠減 8，要向十位借，可是十位是 0，只好先向百位借：百位 5 變 4，十位變成 10。','十位再借 1 給個位：十位剩 9，個位變 13，13 − 8 = 5。','十位 9 − 6 = 3，百位 4 − 2 = 2，答案 235。檢查：235 + 268 = 503。']},
+  tiers:[
+   r=>{if(r()<.5){let a,b;do{a=ri(r,15,79);b=ri(r,12,89-a+10);}while(a%10+b%10<10||a+b>99);return{h:`${a} + ${b} =`,key:String(a+b),check:numCheck(R(a+b)),hint:`個位 ${a%10} + ${b%10} = ${a%10+b%10}，滿 10 要向十位進 1。`};}
+     let a,b;do{a=ri(r,31,98);b=ri(r,12,a-5);}while(a%10>=b%10);return{h:`${a} − ${b} =`,key:String(a-b),check:numCheck(R(a-b)),hint:`個位 ${a%10} 不夠減 ${b%10}，向十位借 1，變成 ${a%10+10} − ${b%10}。`};},
+   r=>{if(r()<.5){let a,b;do{a=ri(r,156,689);b=ri(r,145,899-a);}while(a%10+b%10<10||Math.floor(a/10)%10+Math.floor(b/10)%10+1<10);return{h:`${a} + ${b} =`,key:String(a+b),check:numCheck(R(a+b)),hint:'個位、十位都會進位，進上去的 1 別忘了加。'};}
+     let a,b;do{a=ri(r,3,9)*100+ri(r,0,8);b=ri(r,112,a-20);}while(b%10<=a%10||Math.floor(b/10)%10===0);return{h:`${a} − ${b} =`,key:String(a-b),check:numCheck(R(a-b)),hint:`十位是 0，要先向百位借：百位少 1，十位變 10，再借 1 給個位，十位剩 9。`};},
+   r=>{const t=ri(r,0,2);if(t===0){const x=ri(r,215,689),b=ri(r,148,299);return{h:`□ + ${b} = ${x+b}，□ = ?`,key:String(x),check:numCheck(R(x)),hint:`□ = ${x+b} − ${b}。`};}
+     if(t===1){const x=ri(r,245,699),b=ri(r,126,299);return{h:`□ − ${b} = ${x}，□ = ?`,key:String(x+b),check:numCheck(R(x+b)),hint:`被減數 = 差 + 減數 = ${x} + ${b}。`};}
+     const a=ri(r,10,19)*100+ri(r,0,9),b=ri(r,268,689);return{h:`圖書館原有 ${a} 本書，借出 ${b} 本，還剩幾本？`,key:String(a-b),check:numCheck(R(a-b)),hint:`${a} − ${b}，注意 0 的地方要連續借位。`};}]
+};
+
+/* ---------- 時間的計算 ---------- */
+MOD['M-time']={
+  goal:'知道 1 小時 = 60 分，會算經過多久，也會算「幾點幾分再過多久是幾點幾分」。',
+  wrong:{h:'常見的錯：從 9:40 到 10:20，用 1020 − 940 = 80，說經過 80 分；1 小時 30 分寫成 130 分。',why:'時間是「滿 60 分進 1 小時」，不是滿 100。9:40 到 10:00 是 20 分，10:00 到 10:20 又是 20 分，共 40 分。1 小時 30 分 = 60 + 30 = 90 分。'},
+  concept:['1 小時 = 60 分，1 分 = 60 秒；1 天 = 24 小時，中午 12 點以後是下午。','算經過多久：先湊到整點，再加上整點之後的時間。','分鐘加起來滿 60，就換成 1 小時；不夠減時，借 1 小時當 60 分。'],
+  widget:{init:()=>({s:0,add:0}),printState:()=>({s:0,add:40}),starts:[9*60+40,14*60+50,11*60+35],
+    render(s){const t0=this.starts[s.s],t=t0+s.add;const h=Math.floor(t/60)%12,m=t%60;const cx=105,cy=105,R0=88;let g=`<circle cx="${cx}" cy="${cy}" r="${R0}" fill="#fff" stroke="#333" stroke-width="3"/>`;
+      for(let i=1;i<=12;i++){const a=i*Math.PI/6;g+=`<text x="${cx+70*Math.sin(a)}" y="${cy-70*Math.cos(a)+6}" font-size="17" text-anchor="middle">${i}</text>`;}
+      for(let i=0;i<60;i++){const a=i*Math.PI/30,r1=i%5?82:78;g+=`<line x1="${cx+r1*Math.sin(a)}" y1="${cy-r1*Math.cos(a)}" x2="${cx+R0*Math.sin(a)}" y2="${cy-R0*Math.cos(a)}" stroke="#333" stroke-width="${i%5?1:2}"/>`;}
+      const ha=(h+m/60)*Math.PI/6,ma=m*Math.PI/30;
+      g+=`<line x1="${cx}" y1="${cy}" x2="${cx+45*Math.sin(ha)}" y2="${cy-45*Math.cos(ha)}" stroke="#1d2433" stroke-width="7" stroke-linecap="round"/><line x1="${cx}" y1="${cy}" x2="${cx+68*Math.sin(ma)}" y2="${cy-68*Math.cos(ma)}" stroke="#d23c3c" stroke-width="4" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="5" fill="#333"/>`;
+      const eh=Math.floor(s.add/60),em=s.add%60;
+      g+=`<text x="220" y="55" font-size="18">開始：${hm(t0)}</text><text x="220" y="100" font-size="18" fill="#4f8fd8">經過：${eh?eh+' 小時 ':''}${em} 分（共 ${s.add} 分）</text><text x="220" y="145" font-size="20" font-weight="700">現在：${hm(t)}</text>`;
+      const toHour=60-t0%60;
+      return `<svg viewBox="0 0 440 215" class="wsvg">${g}</svg><p class="wmsg">${s.add===0?'按下面的按鈕讓時間往前走，看看分針（紅色）和時針怎麼動。':s.add<toHour?`從 ${hm(t0)} 走了 ${s.add} 分，到 ${hm(t)}；再走 ${toHour-s.add} 分就到整點 ${hm(t0+toHour)}。`:`從 ${hm(t0)} 先走 ${toHour} 分到整點 ${hm(t0+toHour)}${s.add>toHour?`，再走 ${s.add-toHour} 分到 ${hm(t)}`:''}。`}</p>`;},
+    controls(s){return `<div class="wctl">往前走：${[[5,'5 分'],[15,'15 分'],[30,'30 分'],[60,'1 小時']].map(([v,n])=>`<button class="chip" data-act="a" data-v="${v}">+ ${n}</button>`).join('')}<button class="chip" data-act="z">重來</button></div>
+      <div class="wctl">開始時間：${this.starts.map((t,i)=>`<button class="chip" data-act="s" data-v="${i}" aria-pressed="${s.s===i}">${hm(t)}</button>`).join('')}</div>`;},
+    act(s,a,v){if(a==='a')s.add=Math.min(s.add+ +v,600);if(a==='z')s.add=0;if(a==='s'){s.s=+v;s.add=0;}}},
+  example:{q:'上午 10:45 開始看電影，電影長 1 小時 50 分，幾點幾分結束？',steps:['先加 1 小時：11:45。','再加 50 分：45 + 50 = 95 分，滿 60 分要換成 1 小時，95 − 60 = 35。','所以是 12:35，也就是中午 12:35。']},
+  tiers:[
+   r=>{if(r()<.5){const h=ri(r,1,3),m=ri(r,1,11)*5;return{h:`${h} 小時 ${m} 分 = 幾分？`,key:String(h*60+m),check:numCheck(R(h*60+m)),hint:`1 小時 = 60 分：${h} × 60 + ${m}。`};}
+     const t=ri(r,13,35)*5;return{h:`${t} 分 = ${Math.floor(t/60)} 小時又幾分？`,key:String(t%60),check:numCheck(R(t%60)),hint:`${t} − ${Math.floor(t/60)*60} = ?（1 小時是 60 分）`};},
+   r=>{let t0,e;do{t0=ri(r,7,10)*60+ri(r,4,11)*5;e=ri(r,5,22)*5;}while(t0%60+e%60<60);return{h:`從 ${hm(t0)} 到 ${hm(t0+e)}，經過幾分鐘？`,key:String(e),check:numCheck(R(e)),hint:`先算到整點：${hm(t0)} 到 ${hm(t0+60-t0%60)} 是 ${60-t0%60} 分，再往後算。`};},
+   r=>{let t0,e;do{t0=pick(r,[11,13,14,15,16])*60+ri(r,6,11)*5;e=ri(r,1,2)*60+ri(r,3,11)*5;}while(t0%60+e%60<60);const t=t0+e;
+     return{h:`${hm(t0)} 出發，經過 ${Math.floor(e/60)} 小時 ${e%60} 分到達，到達時是幾點幾分？（寫成 4:15 這樣）`,key:hm12(t),check:timeCheck(Math.floor(t/60),t%60),hint:`先加 ${Math.floor(e/60)} 小時，再加 ${e%60} 分；分鐘超過 60 要進 1 小時。`};}]
+};
+
+/* ---------- 長度單位換算 ---------- */
+MOD['M-len']={
+  goal:'知道 1 公里 = 1000 公尺、1 公尺 = 100 公分、1 公分 = 10 公釐，會把「幾公尺幾公分」換成同一個單位。',
+  wrong:{h:'常見的錯：3 公尺 5 公分寫成 35 公分；2 公里 40 公尺寫成 240 公尺。',why:'3 公尺是 3 × 100 = 300 公分，再加 5 公分是 305 公分；2 公里是 2000 公尺，再加 40 公尺是 2040 公尺。中間空出來的位數要補 0。'},
+  concept:['1 公里 = 1000 公尺，1 公尺 = 100 公分，1 公分 = 10 公釐。','大單位換小單位用乘（數字變大）；小單位換大單位用除（數字變小）。','「幾公尺幾公分」：先把大單位換好，再加上小單位，空位記得補 0。'],
+  widget:{init:()=>({p:0}),printState:()=>({p:0}),
+    presets:[{a:3,b:5,u:1},{a:2,b:40,u:0},{a:4,b:6,u:2},{a:1,b:85,u:1}],U:['公里','公尺','公分','公釐'],F:[1000,100,10],
+    render(s){const P=this.presets[s.p],U=this.U;let g='';
+      U.forEach((u,i)=>{const x=20+i*102,y=30+i*38,on=i===P.u||i===P.u+1;g+=`<rect x="${x}" y="${y}" width="100" height="36" rx="6" fill="${on?'#f6d7a8':'#eef3fb'}" stroke="#333"/><text x="${x+50}" y="${y+25}" font-size="19" text-anchor="middle" font-weight="${on?700:400}">${u}</text>`;
+        if(i<3)g+=`<path d="M${x+70} ${y+36} v 20 h 30" fill="none" stroke="${i===P.u?'#d23c3c':'#999'}" stroke-width="2"/><text x="${x+64}" y="${y+54}" font-size="15" text-anchor="end" fill="${i===P.u?'#d23c3c':'#666'}">× ${this.F[i]}</text>`;});
+      const f=this.F[P.u],tot=P.a*f+P.b;const ds=String(tot).split(''),w=String(f).length;
+      ds.forEach((d,i)=>{const pos=ds.length-1-i;g+=`<text x="${36+i*30}" y="196" font-size="28" font-weight="700" text-anchor="middle" fill="${pos<w-1?'#d23c3c':'#1d2433'}">${d}</text>`;});
+      g+=`<text x="${36+ds.length*30-6}" y="196" font-size="17">${U[P.u+1]}</text>`;
+      return `<svg viewBox="0 0 440 215" class="wsvg">${g}</svg><p class="wmsg">${P.a} ${U[P.u]} = ${P.a} × ${f} = ${P.a*f} ${U[P.u+1]}，再加 ${P.b} ${U[P.u+1]}，共 <b>${tot} ${U[P.u+1]}</b>（紅色的位數是 ${P.b} ${U[P.u+1]}）。${String(P.b).length<String(f).length-1?`${P.b} 只有 ${String(P.b).length} 位數，前面要補 0，不能寫成 ${P.a}${P.b}。`:''}</p>`;},
+    controls(s){return `<div class="wctl">換一題：${this.presets.map((p,i)=>`<button class="chip" data-act="p" data-v="${i}" aria-pressed="${s.p===i}">${p.a} ${this.U[p.u]} ${p.b} ${this.U[p.u+1]}</button>`).join('')}</div>`;},
+    act(s,a,v){s.p=+v;}},
+  example:{q:'2 公里 35 公尺 + 980 公尺 = 幾公尺？',steps:['2 公里 = 2000 公尺，所以 2 公里 35 公尺 = 2035 公尺（百位要補 0）。','2035 + 980 = 3015 公尺。','也可以寫成 3 公里 15 公尺。']},
+  tiers:[
+   r=>{if(r()<.6){const a=ri(r,2,9),b=ri(r,12,95);return{h:`${a} 公尺 ${b} 公分 = 幾公分？`,key:String(a*100+b),check:numCheck(R(a*100+b)),hint:`${a} 公尺 = ${a*100} 公分，再加 ${b}。`};}
+     const a=ri(r,2,19),b=ri(r,1,9);return{h:`${a} 公分 ${b} 公釐 = 幾公釐？`,key:String(a*10+b),check:numCheck(R(a*10+b)),hint:`1 公分 = 10 公釐：${a} × 10 + ${b}。`};},
+   r=>{if(r()<.5){const a=ri(r,1,6),b=pick(r,[ri(r,1,9),ri(r,10,95)]);return{h:`${a} 公里 ${b} 公尺 = 幾公尺？`,key:String(a*1000+b),check:numCheck(R(a*1000+b)),hint:`${a} 公里 = ${a*1000} 公尺，${b} 要放在最後${b<10?'一位，中間補兩個 0':'兩位，百位補 0'}。`};}
+     const a=ri(r,2,9),b=ri(r,1,9);return{h:`${a} 公尺 ${b} 公分 = 幾公分？`,key:String(a*100+b),check:numCheck(R(a*100+b)),hint:`${a} 公尺 = ${a*100} 公分，${b} 只有一位數，十位要補 0。`};},
+   r=>{const t=ri(r,0,2);if(t===0){const n=ri(r,11,49)*10;return{h:`${n} 公分 = 幾公尺？（可以用小數）`,key:String(n/100),check:numCheck(R(n,100)),hint:`100 公分 = 1 公尺：${n} ÷ 100。`};}
+     if(t===1){const n=ri(r,12,95)*100;return{h:`${n} 公尺 = 幾公里？（可以用小數）`,key:String(n/1000),check:numCheck(R(n,1000)),hint:`1000 公尺 = 1 公里：${n} ÷ 1000。`};}
+     const a=pick(r,[1.2,1.5,2.4,2.5,3.6]),b=ri(r,3,9)*10+5;return{h:`${a} 公尺 + ${b} 公分 = 幾公分？`,key:String(Math.round(a*100)+b),check:numCheck(R(Math.round(a*100)+b)),hint:`${a} 公尺 = ${Math.round(a*100)} 公分。`};}]
+};
+
+/* ---------- 整數乘法 ---------- */
+MOD['I-mul']={
+  goal:'會用直式算乘法，知道 23 × 14 就是 23 × 10 加上 23 × 4。',
+  wrong:{h:'常見的錯：23 × 14 算成 23 × 4 = 92，再加 23 × 1 = 23，得到 115；36 × 7 忘記加進位，算成 212。',why:'14 的 1 在十位，代表 10，要算 23 × 10 = 230，所以直式第二行要往左移一格：92 + 230 = 322。進位的數要在乘完下一位後加上去：6 × 7 = 42，寫 2 進 4；3 × 7 = 21，再加 4 = 25，答案 252。'},
+  concept:['乘法就是「幾個幾」：4 × 6 是 4 個 6，也是 6 個 4，答案一樣。','把數拆成十位和個位，分開乘再加起來：23 × 14 = 23 × 10 + 23 × 4。','直式：先乘個位，再乘十位（寫的時候往左移一格），最後相加。'],
+  widget:{init:()=>({p:0}),printState:()=>({p:0}),presets:[[23,14],[36,7],[45,12],[18,25]],
+    render(s){const [a,b]=this.presets[s.p];const a1=Math.floor(a/10)*10,a0=a%10,b1=Math.floor(b/10)*10,b0=b%10;
+      const cw=[a1?230:0,a0?110:0],rh=[b1?90:0,b0?62:0];const xs=[70,70+cw[0]],ys=[34,34+rh[0]];const col=[['#a9c9ef','#cfe1f7'],['#f6d7a8','#fbe6c8']];let g='',parts=[];
+      [a1,a0].forEach((av,i)=>{if(!av)return;g+=`<text x="${xs[i]+cw[i]/2}" y="24" font-size="19" text-anchor="middle" font-weight="700">${av}</text>`;});
+      [b1,b0].forEach((bv,j)=>{if(!bv)return;g+=`<text x="58" y="${ys[j]+rh[j]/2+7}" font-size="19" text-anchor="end" font-weight="700">${bv}</text>`;
+        [a1,a0].forEach((av,i)=>{if(!av)return;g+=`<rect x="${xs[i]}" y="${ys[j]}" width="${cw[i]}" height="${rh[j]}" fill="${col[j][i]}" stroke="#333"/><text x="${xs[i]+cw[i]/2}" y="${ys[j]+rh[j]/2+7}" font-size="18" text-anchor="middle">${av} × ${bv} = ${av*bv}</text>`;parts.push(av*bv);});});
+      return `<svg viewBox="0 0 440 ${44+rh[0]+rh[1]}" class="wsvg">${g}</svg><p class="wmsg">${a} 拆成 ${[a1,a0].filter(Boolean).join(' + ')}${b>=10?`，${b} 拆成 ${[b1,b0].filter(Boolean).join(' + ')}`:''}。每一塊分開算，再加起來：${parts.join(' + ')} = <b>${a*b}</b>。</p>`;},
+    controls(s){return `<div class="wctl">換一題：${this.presets.map((p,i)=>`<button class="chip" data-act="p" data-v="${i}" aria-pressed="${s.p===i}">${p[0]} × ${p[1]}</button>`).join('')}</div>`;},
+    act(s,a,v){s.p=+v;}},
+  example:{q:'36 × 24 = ?',steps:['先乘個位：36 × 4 = 144。','再乘十位：36 × 20 = 720（直式寫成 72，往左移一格）。','加起來：144 + 720 = 864。']},
+  tiers:[
+   r=>{let a,b;do{a=ri(r,13,98);b=ri(r,3,9);}while((a%10)*b<10);return{h:`${a} × ${b} =`,key:String(a*b),check:numCheck(R(a*b)),hint:`先算 ${a%10} × ${b} = ${(a%10)*b}，寫 ${(a%10)*b%10} 進 ${Math.floor((a%10)*b/10)}；再算 ${Math.floor(a/10)} × ${b}，加上進位。`};},
+   r=>{if(r()<.5){const a=ri(r,1,9)*100+ri(r,1,9),b=ri(r,3,9);return{h:`${a} × ${b} =`,key:String(a*b),check:numCheck(R(a*b)),hint:`十位是 0，0 × ${b} = 0，但個位乘完的進位要寫在十位。`};}
+     const a=ri(r,12,39),b=ri(r,11,19);return{h:`${a} × ${b} =`,key:String(a*b),check:numCheck(R(a*b)),hint:`${a} × ${b} = ${a} × 10 + ${a} × ${b-10}。`};},
+   r=>{if(r()<.5){const a=ri(r,23,98),b=ri(r,21,49);return{h:`${a} × ${b} =`,key:String(a*b),check:numCheck(R(a*b)),hint:`先算 ${a} × ${b%10}，再算 ${a} × ${b-b%10}，最後相加。`};}
+     const n=ri(r,12,36),k=ri(r,14,28);const it=pick(r,[['盒','顆餅乾'],['箱','瓶水'],['排','張椅子']]);return{h:`一${it[0]}有 ${n} ${it[1].slice(0,1)}${it[1].slice(1)}，${k} ${it[0]}共有幾${it[1].slice(0,1)}？`,key:String(n*k),check:numCheck(R(n*k)),hint:`${k} 個 ${n}：${n} × ${k}。`};}]
+};
+
+/* ---------- 整數除法 ---------- */
+MOD['I-div']={
+  goal:'會用直式算除法，知道餘數一定比除數小，商的中間有 0 也不能漏掉。',
+  wrong:{h:'常見的錯：47 ÷ 6 算成 6 餘 11；624 ÷ 6 算成 14（漏掉中間的 0）。',why:'餘數 11 比除數 6 大，代表還可以再分 1 份，應該是 7 餘 5。624 ÷ 6：百位 6 ÷ 6 = 1；十位 2 不夠除 6，商要寫 0；再把 2 和 4 合成 24，24 ÷ 6 = 4，答案是 104。'},
+  concept:['除法是「平分」或「每幾個分一份」：47 顆糖每 6 顆裝一包，可以裝 7 包，剩 5 顆。','餘數一定比除數小。檢查：商 × 除數 + 餘數 = 被除數。','直式從最高位開始除；某一位不夠除，商就寫 0，再往下一位合起來除。'],
+  widget:{init:()=>({n:47,d:6}),printState:()=>({n:47,d:6}),
+    render(s){const {n,d}=s,q=Math.floor(n/d),rm=n%d;const per=Math.max(1,Math.floor(400/(d*13+14)));const gw=d*13+8;let g='',k=0;
+      for(let i=0;i<q;i++){const x=12+(i%per)*(gw+6),y=12+Math.floor(i/per)*34;g+=`<rect x="${x}" y="${y}" width="${gw}" height="26" rx="8" fill="#eef3fb" stroke="#4f8fd8" stroke-width="1.5"/>`;for(let j=0;j<d;j++)g+=`<circle cx="${x+10+j*13}" cy="${y+13}" r="5" fill="#4f8fd8"/>`;k++;}
+      const ry=12+Math.ceil(q/per)*34;for(let j=0;j<rm;j++)g+=`<circle cx="${22+j*16}" cy="${ry+13}" r="6" fill="#d23c3c"/>`;
+      if(rm)g+=`<text x="${30+rm*16}" y="${ry+19}" font-size="17" fill="#d23c3c">剩 ${rm} 個</text>`;
+      return `<svg viewBox="0 0 440 ${ry+(rm?40:8)}" class="wsvg">${g}</svg><p class="wmsg">${n} 個，每 ${d} 個圈成一組：可以圈 <b>${q} 組</b>，${rm?`剩下 <b>${rm} 個</b>（比 ${d} 少，不能再圈一組）。${n} ÷ ${d} = ${q} 餘 ${rm}。`:`剛好分完。${n} ÷ ${d} = ${q}。`}檢查：${q} × ${d}${rm?' + '+rm:''} = ${n}。</p>`;},
+    controls(s){return `<div class="wctl">一共：${[17,23,30,47].map(v=>`<button class="chip" data-act="n" data-v="${v}" aria-pressed="${s.n===v}">${v} 個</button>`).join('')}</div>
+      <div class="wctl">每組：${[3,4,5,6,8].map(v=>`<button class="chip" data-act="d" data-v="${v}" aria-pressed="${s.d===v}">${v} 個</button>`).join('')}</div>`;},
+    act(s,a,v){s[a]=+v;}},
+  example:{q:'635 ÷ 6 = ?',steps:['百位：6 ÷ 6 = 1，商寫 1。','十位：3 不夠除 6，商寫 0；把 3 和個位的 5 合成 35。','35 ÷ 6 = 5 餘 5，答案是 105 餘 5。檢查：105 × 6 + 5 = 635。']},
+  tiers:[
+   r=>{const d=ri(r,3,9),q=ri(r,3,12),rm=ri(r,1,d-1);const n=q*d+rm;return{h:`${n} ÷ ${d} = ？（有餘數請寫成「7 餘 5」）`,key:`${q} 餘 ${rm}`,check:divCheck(q,rm,d),hint:`${d} 的幾倍最接近 ${n} 又不超過？${d} × ${q} = ${q*d}。`};},
+   r=>{let d,q;do{d=ri(r,2,9);q=r()<.6?ri(r,1,9)*100+ri(r,1,9):ri(r,1,9)*100+ri(r,1,9)*10;}while(q*d>999);return{h:`${q*d} ÷ ${d} =`,key:String(q),check:divCheck(q,0,d),hint:'從百位開始除；哪一位不夠除，商就寫 0。'};},
+   r=>{if(r()<.5){const d=pick(r,[4,5,6,7,8,9]);let n;do{n=ri(r,23,60);}while(n%d===0);const q=Math.ceil(n/d);return{h:`${n} 位學生去校外教學，每輛車最多坐 ${d} 人，至少要幾輛車？`,key:String(q),check:numCheck(R(q)),hint:`${n} ÷ ${d} = ${Math.floor(n/d)} 餘 ${n%d}，剩下的 ${n%d} 人也要坐車。`};}
+     const d=ri(r,12,35),q=ri(r,12,39);return{h:`${q*d} ÷ ${d} =`,key:String(q),check:divCheck(q,0,d),hint:`先估：${d} 大約是 ${Math.round(d/10)*10}，${q*d} ÷ ${Math.round(d/10)*10} 大約是多少？再調整。`};}]
+};
+
+/* ---------- 分數的意義與約分 ---------- */
+MOD['F-equiv']={
+  goal:'知道分數是「平分成幾份、取幾份」，會擴分、約分，找出一樣大的分數。',
+  wrong:{h:`常見的錯：${F(2,3)} = ${F(4,5)}（分子分母都加 2）；${F(6,8)} 約分成 ${F(3,8)}（只除分子）。`,why:`擴分、約分要把分子和分母「同時乘」或「同時除」以同一個數，大小才不會變。${F(2,3)} 分子分母都乘 2 是 ${F(4,6)}；${F(6,8)} 分子分母都除以 2 是 ${F(3,4)}。`},
+  concept:['分母：平分成幾份；分子：取了幾份。分子比分母大的叫假分數，可以化成帶分數。','擴分：分子分母同乘一個數，每一份切得更細，塗色的長度不變。','約分：分子分母同除以公因數；除到只剩 1 這個公因數，就是最簡分數。'],
+  widget:{init:()=>({p:0,k:1}),printState:()=>({p:0,k:3}),presets:[[2,3],[3,4],[1,2],[3,5]],
+    render(s){const [a,b]=this.presets[s.p],k=s.k,W=300;const bar=(n,den,y,col)=>{let g=`<rect x="20" y="${y}" width="${W}" height="40" fill="#fff" stroke="#333"/><rect x="20" y="${y}" width="${W*n/den}" height="40" fill="${col}" opacity=".8"/>`;
+        for(let i=1;i<den;i++)g+=`<line x1="${20+W*i/den}" y1="${y}" x2="${20+W*i/den}" y2="${y+40}" stroke="#333"/>`;return g+`<text x="${W+34}" y="${y+27}" font-size="20">${n}/${den}</text>`;};
+      return `<svg viewBox="0 0 440 130" class="wsvg">${bar(a,b,12,'#4f8fd8')}${bar(a*k,b*k,72,'#e39b3b')}</svg><p class="wmsg">${k===1?'下面的條和上面一樣。按「× 2」「× 3」把每一份再切細。':`每一份再切成 ${k} 份：分母 ${b} × ${k} = ${b*k}，塗色的份數也變成 ${a} × ${k} = ${a*k}。塗色的長度沒變，所以 ${F(a,b)} = ${F(a*k,b*k)}。反過來把 ${F(a*k,b*k)} 的分子分母同除以 ${k}，就是約分。`}</p>`;},
+    controls(s){return `<div class="wctl">擴分：${[1,2,3,4].map(v=>`<button class="chip" data-act="k" data-v="${v}" aria-pressed="${s.k===v}">× ${v}</button>`).join('')}</div>
+      <div class="wctl">換一個分數：${this.presets.map((p,i)=>`<button class="chip" data-act="p" data-v="${i}" aria-pressed="${s.p===i}">${p[0]}/${p[1]}</button>`).join('')}</div>`;},
+    act(s,a,v){if(a==='k')s.k=+v;if(a==='p'){s.p=+v;s.k=1;}}},
+  example:{q:`把 ${F(24,36)} 約分成最簡分數`,steps:[`24 和 36 都是偶數，同除以 2：${F(12,18)}。`,`12 和 18 都可以被 6 整除，同除以 6：${F(2,3)}。`,`2 和 3 只剩 1 這個公因數，所以最簡分數是 ${F(2,3)}。（一次除以最大公因數 12 也可以。）`]},
+  tiers:[
+   r=>{if(r()<.5){const b=ri(r,3,9),a=ri(r,1,b-1);const it=pick(r,[['一個披薩','片','吃了'],['一條緞帶','段','用了'],['一盒蛋糕','塊','分給弟弟']]);
+       return{h:`${it[0]}平分成 ${b} ${it[1]}，${it[2]} ${a} ${it[1]}，是全部的幾分之幾？`,key:`${a}/${b}`,check:numCheck(R(a,b)),hint:`平分成 ${b} 份是分母，取了 ${a} 份是分子。`};}
+     const b=ri(r,2,9),a=cop(r,b),k=ri(r,2,6);return{h:`${F(a,b)} = ${F('?',b*k)}，? 是多少？`,key:String(a*k),check:numCheck(R(a*k)),hint:`分母 ${b} 變成 ${b*k} 是乘 ${k}，分子也要乘 ${k}。`};},
+   r=>{const b=ri(r,3,9),a=cop(r,b),g=ri(r,2,6);return{h:`把 ${F(a*g,b*g)} 約分成最簡分數`,key:`${a}/${b}`,check:simplestCheck(R(a,b)),hint:`${a*g} 和 ${b*g} 都可以被 ${g} 整除。`};},
+   r=>{const d=ri(r,3,9),rr=cop(r,d),w=ri(r,1,5),n=w*d+rr;return r()<.5?{h:`把 ${F(n,d)} 化成帶分數`,key:`${w} ${rr}/${d}`,check:mixedCheck(R(n,d)),hint:`${n} ÷ ${d} = ${w} 餘 ${rr}：整數部分是 ${w}，剩下 ${rr} 份。`}
+     :{h:`把 ${w}${F(rr,d)} 化成假分數`,key:`${n}/${d}`,check:improperCheck(R(n,d)),hint:`${w} 個整數 = ${w} × ${d} = ${w*d} 份，再加 ${rr} 份。`};}]
+};
+
+/* ---------- 周長與面積 ---------- */
+MOD['M-rect']={
+  goal:'分清楚周長（繞一圈的長度）和面積（裡面有幾格），會算長方形、正方形的周長和面積。',
+  wrong:{h:'常見的錯：長 8、寬 5 的長方形，周長算成 8 + 5 = 13，或 8 × 5 = 40。',why:'周長要繞一整圈：長、寬、長、寬，(8 + 5) × 2 = 26 公分。8 × 5 = 40 是面積（裡面有 40 個 1 平方公分的方格），單位是平方公分。'},
+  concept:['長方形周長 =（長 + 寬）× 2；正方形周長 = 邊長 × 4，單位是公分。','長方形面積 = 長 × 寬；正方形面積 = 邊長 × 邊長，單位是平方公分。','周長量的是「邊」，面積數的是「格子」，兩個不一樣。'],
+  widget:{init:()=>({l:6,w:4,m:'p'}),printState:()=>({l:6,w:4,m:'a'}),
+    render(s){const u=Math.min(40,Math.floor(380/s.l)),x0=30,y0=20;let g='';
+      for(let i=0;i<s.l;i++)for(let j=0;j<s.w;j++){g+=`<rect x="${x0+i*u}" y="${y0+j*u}" width="${u}" height="${u}" fill="${s.m==='a'?'#cfe1f7':'#fff'}" stroke="#bbb"/>`;if(s.m==='a')g+=`<text x="${x0+i*u+u/2}" y="${y0+j*u+u/2+5}" font-size="13" text-anchor="middle" fill="#335">${j*s.l+i+1}</text>`;}
+      g+=`<rect x="${x0}" y="${y0}" width="${s.l*u}" height="${s.w*u}" fill="none" stroke="${s.m==='p'?'#d23c3c':'#333'}" stroke-width="${s.m==='p'?5:2}"/>`;
+      g+=`<text x="${x0+s.l*u/2}" y="${y0+s.w*u+24}" font-size="17" text-anchor="middle">長 ${s.l} 公分</text><text x="${x0+s.l*u+8}" y="${y0+s.w*u/2+6}" font-size="17">寬 ${s.w}</text>`;
+      return `<svg viewBox="0 0 440 ${y0+s.w*u+34}" class="wsvg">${g}</svg><p class="wmsg">${s.m==='p'?`紅色是周長：繞一圈有 長 ${s.l} + 寬 ${s.w} + 長 ${s.l} + 寬 ${s.w} = (${s.l} + ${s.w}) × 2 = <b>${(s.l+s.w)*2} 公分</b>。`:`藍色是面積：每排 ${s.l} 格，有 ${s.w} 排，${s.l} × ${s.w} = <b>${s.l*s.w} 平方公分</b>。`}</p>`;},
+    controls(s){return `<div class="wctl"><button class="chip" data-act="m" data-v="p" aria-pressed="${s.m==='p'}">看周長</button><button class="chip" data-act="m" data-v="a" aria-pressed="${s.m==='a'}">看面積</button></div>
+      <div class="wctl">長：${[3,4,5,6,7,8].map(v=>`<button class="chip" data-act="l" data-v="${v}" aria-pressed="${s.l===v}">${v}</button>`).join('')}</div><div class="wctl">寬：${[2,3,4,5].map(v=>`<button class="chip" data-act="w" data-v="${v}" aria-pressed="${s.w===v}">${v}</button>`).join('')}</div>`;},
+    act(s,a,v){s[a]=a==='m'?v:+v;}},
+  example:{q:'一個長方形的周長是 30 公分，長是 9 公分，面積是多少平方公分？',steps:['周長 =（長 + 寬）× 2，所以長 + 寬 = 30 ÷ 2 = 15 公分。','寬 = 15 − 9 = 6 公分。','面積 = 9 × 6 = 54 平方公分。']},
+  tiers:[
+   r=>{const l=ri(r,5,15),w=ri(r,2,l-1);return r()<.5?{h:`長 ${l} 公分、寬 ${w} 公分的長方形，周長是多少公分？`,key:String((l+w)*2),check:numCheck(R((l+w)*2)),hint:`周長 =（長 + 寬）× 2。`}
+     :{h:`長 ${l} 公分、寬 ${w} 公分的長方形，面積是多少平方公分？`,key:String(l*w),check:numCheck(R(l*w)),hint:`面積 = 長 × 寬。`};},
+   r=>{const t=ri(r,0,2);if(t===0){const a=ri(r,3,15);return{h:`正方形的周長是 ${4*a} 公分，邊長是多少公分？`,key:String(a),check:numCheck(R(a)),hint:'正方形有 4 條一樣長的邊：周長 ÷ 4。'};}
+     const l=ri(r,6,15),w=ri(r,2,l-1);return t===1?{h:`長方形的面積是 ${l*w} 平方公分，長是 ${l} 公分，寬是多少公分？`,key:String(w),check:numCheck(R(w)),hint:'寬 = 面積 ÷ 長。'}
+       :{h:`長方形的周長是 ${(l+w)*2} 公分，長是 ${l} 公分，寬是多少公分？`,key:String(w),check:numCheck(R(w)),hint:`長 + 寬 = 周長 ÷ 2 = ${l+w}。`};},
+   r=>{if(r()<.6){const l=ri(r,6,15),w=ri(r,2,l-1);return{h:`長方形的周長是 ${(l+w)*2} 公分，長是 ${l} 公分，面積是多少平方公分？`,key:String(l*w),check:numCheck(R(l*w)),hint:`先求寬：${(l+w)*2} ÷ 2 − ${l}，再算長 × 寬。`};}
+     const a=ri(r,3,12);return{h:`正方形的周長是 ${4*a} 公分，面積是多少平方公分？`,key:String(a*a),check:numCheck(R(a*a)),hint:`邊長 = ${4*a} ÷ 4 = ${a}，面積 = 邊長 × 邊長。`};}]
+};
+
+/* ---------- 因數與倍數 ---------- */
+MOD['I-factor']={
+  goal:'會找出一個數所有的因數，會求兩個數的最大公因數和最小公倍數，並用在生活問題上。',
+  wrong:{h:'常見的錯：找 36 的因數時漏掉 9 或 36；把 12 和 18 的最小公倍數算成 12 × 18 = 216。',why:'因數要「成對」找：1 × 36、2 × 18、3 × 12、4 × 9、6 × 6，才不會漏，1 和自己也是因數。12 × 18 是公倍數，但不是最小的：12 的倍數 12、24、36……，第一個也是 18 的倍數的是 36。'},
+  concept:['a ÷ b 剛好整除，b 就是 a 的因數，a 就是 b 的倍數。','找因數：從 1 開始成對找，直到兩個數碰在一起。只有 1 和自己兩個因數的數（例如 2、3、5、7、11）叫做質數。','最大公因數：共同因數裡最大的；最小公倍數：共同倍數裡最小的。可以用短除法一起求。'],
+  widget:{init:()=>({m:'f',n:24,p:0}),printState:()=>({m:'g',n:24,p:0}),pairs:[[12,18],[24,36],[8,12],[15,20]],
+    render(s){let g='',msg='',H=0;if(s.m==='f'){const n=s.n,ps=[];for(let a=1;a*a<=n;a++)if(n%a===0)ps.push([a,n/a]);const c=Math.min(9,Math.floor(300/n));let y=12;
+        ps.forEach(([a,b])=>{for(let i=0;i<b;i++)for(let j=0;j<a;j++)g+=`<rect x="${120+i*c}" y="${y+j*c}" width="${c}" height="${c}" fill="#a9c9ef" stroke="#fff" stroke-width=".8"/>`;g+=`<text x="12" y="${y+Math.min(a*c,40)/2+6}" font-size="18">${a} × ${b}</text>`;y+=Math.max(a*c,22)+12;});H=y;
+        const fs=[];ps.forEach(([a,b])=>{fs.push(a);if(a!==b)fs.push(b);});fs.sort((x,y)=>x-y);
+        msg=`${n} 個方格排成長方形，有 ${ps.length} 種排法，每種排法的長和寬就是一對因數。${n} 的因數：${fs.join('、')}，共 ${fs.length} 個。${fs.length===2?`只有 1 和 ${n}，所以 ${n} 是<b>質數</b>。`:''}`;}
+      else{let [a,b]=this.pairs[s.p];const A=a,B=b,L=[];let y=30;for(const p of [2,3,5,7]){while(a%p===0&&b%p===0){g+=`<text x="60" y="${y}" font-size="22" text-anchor="end" fill="#d23c3c" font-weight="700">${p}</text><line x1="70" y1="${y-24}" x2="70" y2="${y+8}" stroke="#333" stroke-width="2"/><text x="110" y="${y}" font-size="22" text-anchor="middle">${a}</text><text x="180" y="${y}" font-size="22" text-anchor="middle">${b}</text><line x1="70" y1="${y+8}" x2="210" y2="${y+8}" stroke="#333" stroke-width="2"/>`;L.push(p);a/=p;b/=p;y+=40;}}
+        g+=`<text x="110" y="${y}" font-size="22" text-anchor="middle" fill="#4f8fd8" font-weight="700">${a}</text><text x="180" y="${y}" font-size="22" text-anchor="middle" fill="#4f8fd8" font-weight="700">${b}</text>`;H=y+16;const G=L.reduce((x,y)=>x*y,1);
+        g+=`<text x="240" y="50" font-size="18" fill="#d23c3c">最大公因數</text><text x="240" y="76" font-size="18" fill="#d23c3c">= ${L.join(' × ')} = ${G}</text><text x="240" y="116" font-size="18">最小公倍數</text><text x="240" y="142" font-size="18">= ${G} × ${a} × ${b} = ${G*a*b}</text>`;H=Math.max(H,156);
+        msg=`短除法：用 ${A} 和 ${B} 共同的質因數一直除，直到兩數（藍色）沒有共同的因數。左邊紅色的數相乘是最大公因數，再乘上最下面兩個藍色的數，就是最小公倍數。`;}
+      return `<svg viewBox="0 0 440 ${H}" class="wsvg">${g}</svg><p class="wmsg">${msg}</p>`;},
+    controls(s){return `<div class="wctl"><button class="chip" data-act="m" data-v="f" aria-pressed="${s.m==='f'}">找因數</button><button class="chip" data-act="m" data-v="g" aria-pressed="${s.m==='g'}">短除法</button></div>`+
+      (s.m==='f'?`<div class="wctl">${[12,18,24,36,17].map(v=>`<button class="chip" data-act="n" data-v="${v}" aria-pressed="${s.n===v}">${v}</button>`).join('')}</div>`
+      :`<div class="wctl">${this.pairs.map((p,i)=>`<button class="chip" data-act="p" data-v="${i}" aria-pressed="${s.p===i}">${p[0]} 和 ${p[1]}</button>`).join('')}</div>`);},
+    act(s,a,v){s[a]=a==='m'?v:+v;}},
+  example:{q:'求 24 和 36 的最大公因數與最小公倍數',steps:['短除法：2 | 24 36 → 12 18；2 | 12 18 → 6 9；3 | 6 9 → 2 3。','2 和 3 沒有共同的因數了。最大公因數 = 2 × 2 × 3 = 12。','最小公倍數 = 12 × 2 × 3 = 72。']},
+  tiers:[
+   r=>{const n=pick(r,[24,30,36,40,42,48,54,60]);if(r()<.5){const fs=[],no=[];for(let i=2;i<n;i++)(n%i?no:fs).push(i);const c=pick(r,fs);const w=[];while(w.length<3){const x=pick(r,no.filter(v=>v<n/2+5));if(!w.includes(x))w.push(x);}
+       const m=shuffleMC(r,String(c),w.map(String));return{h:`下列哪一個是 ${n} 的因數？`,mc:m.options,ans:m.ans,key:String(c),hint:`用 ${n} 除以每個選項，剛好整除的就是因數。`};}
+     let k=0;for(let i=1;i<=n;i++)if(n%i===0)k++;return{h:`${n} 共有幾個因數？`,key:String(k),check:numCheck(R(k)),hint:`成對找：1 × ${n}、2 × ${n/2}……，別忘了 1 和 ${n}。`};},
+   r=>{const g=ri(r,2,9);let x,y;do{x=ri(r,2,7);y=ri(r,2,7);}while(x===y||gcd(x,y)>1);return{h:`${g*x} 和 ${g*y} 的最大公因數是多少？`,key:String(g),check:numCheck(R(g)),hint:`用短除法，一直除到兩個數沒有共同的因數。`};},
+   r=>{let a,b;do{a=pick(r,[6,8,9,10,12,15,18,20]);b=pick(r,[6,8,9,10,12,15,18,20]);}while(a===b||b%a===0||a%b===0);const L=lcm(a,b);
+     return r()<.6?{h:`甲公車每 ${a} 分鐘發一班，乙公車每 ${b} 分鐘發一班。早上 7:00 兩車同時發車，至少再過幾分鐘會再同時發車？`,key:String(L),check:numCheck(R(L)),hint:`要找 ${a} 和 ${b} 的最小公倍數。`}
+       :{h:`${a} 和 ${b} 的最小公倍數是多少？`,key:String(L),check:numCheck(R(L)),hint:`最小公倍數 = 最大公因數 ${gcd(a,b)} × ${a/gcd(a,b)} × ${b/gcd(a,b)}。`};}]
+};
+
+/* ---------- 統計與機率 ---------- */
+MOD['S-stat']={
+  goal:'會求平均數、中位數、眾數，知道極端值的影響，也會用「所有一樣可能的結果」算機率。',
+  wrong:{h:'常見的錯：資料 5, 9, 2, 8, 3 的中位數說成 2（沒有先排序）；丟兩顆骰子，點數和是 7 的機率算成 1/11。',why:'中位數要先由小到大排好：2, 3, 5, 8, 9，正中間是 5。兩顆骰子的點數和 2～12 不是一樣容易出現：一共有 6 × 6 = 36 種一樣可能的結果，和是 7 的有 6 種，機率是 6/36 = 1/6。'},
+  concept:['平均數 = 全部加起來 ÷ 個數，容易被特別大或特別小的數（極端值）拉走。','中位數：由小到大排好，取正中間；個數是偶數時，取中間兩個的平均。眾數：出現最多次的數。','機率 = 符合條件的結果數 ÷ 所有一樣可能的結果數，介於 0 和 1 之間。'],
+  widget:{init:()=>({m:'d',x:false,s:7}),printState:()=>({m:'p',x:false,s:7}),
+    render(s){let g='',msg='',H=170;if(s.m==='d'){const D=[4,5,5,6,7,8,s.x?30:9];const X=v=>20+v*12.5;const cnt={};
+        g+=`<line x1="15" y1="120" x2="425" y2="120" stroke="#333" stroke-width="2"/>`;for(let v=0;v<=32;v+=5)g+=`<line x1="${X(v)}" y1="115" x2="${X(v)}" y2="125" stroke="#333"/><text x="${X(v)}" y="145" font-size="15" text-anchor="middle">${v}</text>`;
+        D.forEach(v=>{cnt[v]=(cnt[v]||0)+1;g+=`<circle cx="${X(v)}" cy="${120-cnt[v]*16}" r="7" fill="${v===30?'#d23c3c':'#4f8fd8'}"/>`;});
+        const mean=D.reduce((a,b)=>a+b,0)/D.length,med=[...D].sort((a,b)=>a-b)[3];
+        g+=`<polygon points="${X(mean)},124 ${X(mean)-8},140 ${X(mean)+8},140" fill="#e39b3b"/><text x="${X(mean)}" y="162" font-size="15" text-anchor="middle" fill="#b06a00">平均 ${+mean.toFixed(2)}</text><line x1="${X(med)}" y1="40" x2="${X(med)}" y2="118" stroke="#0f8a6c" stroke-width="2" stroke-dasharray="4 3"/><text x="${X(med)}" y="34" font-size="15" text-anchor="middle" fill="#0f8a6c">中位數 ${med}</text>`;
+        msg=s.x?`把 9 換成 30（極端值）：平均數從 6.29 被拉到 ${+mean.toFixed(2)}，可是中位數還是 6。資料有極端值時，中位數比較能代表「中間」。`:`7 個數由小到大：4, 5, 5, 6, 7, 8, 9。正中間第 4 個是 6，所以中位數是 6；5 出現 2 次最多，眾數是 5；平均數 = 44 ÷ 7 ≈ 6.29。按「加入極端值」看看會怎樣。`;}
+      else{const c=34,x0=90,y0=36;let k=0;g+=`<text x="${x0-12}" y="${y0-12}" font-size="14">和</text>`;for(let i=1;i<=6;i++){g+=`<text x="${x0+(i-.5)*c}" y="${y0-8}" font-size="15" text-anchor="middle" fill="#4f8fd8">${i}</text><text x="${x0-10}" y="${y0+(i-.5)*c+5}" font-size="15" text-anchor="middle" fill="#e39b3b">${i}</text>`;
+          for(let j=1;j<=6;j++){const on=i+j===s.s;if(on)k++;g+=`<rect x="${x0+(j-1)*c}" y="${y0+(i-1)*c}" width="${c}" height="${c}" fill="${on?'#f6d7a8':'#fff'}" stroke="#bbb"/><text x="${x0+(j-.5)*c}" y="${y0+(i-.5)*c+6}" font-size="16" text-anchor="middle" font-weight="${on?700:400}">${i+j}</text>`;}}
+        H=y0+6*c+10;const r0=R(k,36);g+=`<text x="${x0+6*c+20}" y="90" font-size="17">和是 ${s.s}：</text><text x="${x0+6*c+20}" y="118" font-size="17">${k} 種</text><text x="${x0+6*c+20}" y="146" font-size="17" font-weight="700">${k}/36${r0.d!==36?' = '+ftxt(r0):''}</text>`;
+        msg=`兩顆骰子（藍色一顆、橘色一顆）一共有 6 × 6 = 36 種一樣可能的結果。點數和是 ${s.s} 的有 ${k} 種，所以機率是 ${k}/36${r0.d!==36?' = '+ftxt(r0):''}。和是 7 的格子最多，所以 7 最容易出現。`;}
+      return `<svg viewBox="0 0 440 ${H}" class="wsvg">${g}</svg><p class="wmsg">${msg}</p>`;},
+    controls(s){return `<div class="wctl"><button class="chip" data-act="m" data-v="d" aria-pressed="${s.m==='d'}">平均數與中位數</button><button class="chip" data-act="m" data-v="p" aria-pressed="${s.m==='p'}">骰子的機率</button></div>`+
+      (s.m==='d'?`<div class="wctl"><button class="chip" data-act="x" aria-pressed="${s.x}">${s.x?'拿掉極端值':'加入極端值 30'}</button></div>`
+      :`<div class="wctl">點數和：${[2,4,7,10,12].map(v=>`<button class="chip" data-act="s" data-v="${v}" aria-pressed="${s.s===v}">${v}</button>`).join('')}</div>`);},
+    act(s,a,v){if(a==='m')s.m=v;if(a==='x')s.x=!s.x;if(a==='s')s.s=+v;}},
+  example:{q:'一個袋子裡有 3 顆紅球、5 顆白球、2 顆藍球，隨機摸一顆，摸到「不是白球」的機率是多少？',steps:['所有可能的結果：3 + 5 + 2 = 10 顆，每一顆被摸到的機會一樣。','不是白球的有紅球 3 顆 + 藍球 2 顆 = 5 顆。',`機率 = ${F(5,10)} = ${F(1,2)}。`]},
+  tiers:[
+   r=>{let D;do{D=Array.from({length:5},()=>ri(r,2,20));}while(new Set(D).size<5||D.reduce((a,b)=>a+b,0)%5);const sorted=[...D].sort((a,b)=>a-b);
+     return r()<.5?{h:`資料：${D.join(', ')}，平均數是多少？`,key:String(D.reduce((a,b)=>a+b,0)/5),check:numCheck(R(D.reduce((a,b)=>a+b,0),5)),hint:`全部加起來 = ${D.reduce((a,b)=>a+b,0)}，再除以 5。`}
+       :{h:`資料：${D.join(', ')}，中位數是多少？`,key:String(sorted[2]),check:numCheck(R(sorted[2])),hint:'先由小到大排好，再取正中間（第 3 個）。'};},
+   r=>{if(r()<.5){let D;do{D=Array.from({length:6},()=>ri(r,1,30));}while(new Set(D).size<6);const s=[...D].sort((a,b)=>a-b);const m=R(s[2]+s[3],2);
+       return{h:`資料：${D.join(', ')}，中位數是多少？`,key:ftxt(m).includes('/')?String((s[2]+s[3])/2):ftxt(m),check:numCheck(m),hint:`6 個數排好後，取第 3 和第 4 個（${s[2]} 和 ${s[3]}）的平均。`};}
+     let avg,sc,last;do{avg=ri(r,70,88);sc=Array.from({length:4},()=>avg+ri(r,-8,8));last=avg*5-sc.reduce((a,b)=>a+b,0);}while(last<40||last>100);
+     return{h:`小明 5 次考試的平均是 ${avg} 分，前 4 次是 ${sc.join('、')} 分，第 5 次考幾分？`,key:String(last),check:numCheck(R(last)),hint:`5 次總分 = ${avg} × 5 = ${avg*5}，再減掉前 4 次的和。`};},
+   r=>{if(r()<.5){const s=ri(r,3,11);let k=0;for(let i=1;i<=6;i++)for(let j=1;j<=6;j++)if(i+j===s)k++;const v=R(k,36);return{h:`同時丟兩顆骰子，點數和是 ${s} 的機率是多少？`,key:ftxt(v),check:numCheck(v,{simplest:true}),hint:`一共有 36 種結果，數一數和是 ${s} 的有幾種。`};}
+     const a=ri(r,2,6),b=ri(r,2,6),c=ri(r,1,5),t=a+b+c;const not=r()<.5;const v=R(not?t-b:a,t);
+     return{h:`袋子裡有 ${a} 顆紅球、${b} 顆白球、${c} 顆藍球，隨機摸一顆，摸到${not?'「不是白球」':'紅球'}的機率是多少？`,key:ftxt(v),check:numCheck(v,{simplest:true}),hint:`一共 ${t} 顆，${not?`不是白球的有 ${t-b} 顆`:`紅球有 ${a} 顆`}。`};}]
 };
 
 const TIERS=['基礎','進階','挑戰'];
