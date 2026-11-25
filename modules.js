@@ -88,7 +88,7 @@ const neg=n=>n<0?'−'+(-n):String(n);
 const sgn=n=>n<0?' − '+(-n):' + '+n;
 function norm(s){return String(s||'').trim().replace(/[／]/g,'/').replace(/[－−–]/g,'-').replace(/[：]/g,':').replace(/[，、]/g,',').replace(/（/g,'(').replace(/）/g,')').replace(/\s+/g,' ');}
 function parseNum(s){
-  s=norm(s).replace(/^[a-z]\s*=\s*/i,'').replace(/(元|人|公里|公分|平方公分|度|°)$/,'').trim();let m;
+  s=norm(s).replace(/^[a-z]\s*=\s*/i,'').replace(/(元|人|顆|公里|公分|平方公分|度|°)$/,'').trim();let m;
   if(m=s.match(/^(-?)(\d+)\s*(?:又|\s)\s*(\d+)\/(\d+)$/)){const w=+m[2],n=+m[3],d=+m[4];if(!d)return null;const v=R(w*d+n,d);return{v:m[1]?R(-v.n,v.d):v,raw:[n,d]};}
   if(m=s.match(/^(-?\d+)\/(-?\d+)$/)){if(!+m[2])return null;return{v:R(+m[1],+m[2]),raw:[+m[1],+m[2]]};}
   if(m=s.match(/^-?\d+(\.\d+)?$/)){const p=(m[1]||'.').length-1;const k=10**p;return{v:R(Math.round(parseFloat(s)*k),k),raw:null};}
@@ -333,6 +333,431 @@ MOD['N-quadfn']={
    r=>{let h,k;do{h=ri(r,-4,4);k=ri(r,-4,4);}while(!h||!k);const e=(x,y)=>`y = (x ${x>0?'−':'+'} ${Math.abs(x)})² ${y>0?'+':'−'} ${Math.abs(y)}`;const m=shuffleMC(r,e(h,k),[e(-h,k),e(h,-k),e(-h,-k)]);
      return{h:`把 y = x² 的圖形向${h>0?'右':'左'}平移 ${Math.abs(h)}、向${k>0?'上':'下'}平移 ${Math.abs(k)}，新的函數是？`,mc:m.options,ans:m.ans,key:e(h,k),hint:`向右移 h → (x − h)；向上移 k → + k。`};}
   ]
+};
+
+/* ================= 第二批模組（模擬路線需要的其他關卡） ================= */
+/* ---- 共用的答案檢查 ---- */
+function listCheck(vals){return str=>{const parts=norm(str).replace(/[xX]\s*=/g,'').replace(/或|和/g,',').split(/[,;]/).map(x=>x.trim()).filter(Boolean);const ps=parts.map(parseNum);
+  if(!parts.length||ps.some(p=>!p))return{ok:false,note:'請把答案用逗號隔開，例如 2, −3。'};
+  if(ps.length!==vals.length)return{ok:false,note:`這題應該有 ${vals.length} 個答案。`};const used=[];
+  for(const v of vals){const i=ps.findIndex((p,j)=>!used.includes(j)&&eq(p.v,v));if(i<0)return{ok:false};used.push(i);}return{ok:true};};}
+function pairCheck(x,y,nx='x',ny='y'){if(typeof x==='number')x=R(x);if(typeof y==='number')y=R(y);return str=>{const s=norm(str);const mx=s.match(new RegExp(nx+'\\s*=\\s*(-?[\\d./]+)','i')),my=s.match(new RegExp(ny+'\\s*=\\s*(-?[\\d./]+)','i'));let a,b;
+  if(mx&&my){a=parseNum(mx[1]);b=parseNum(my[1]);}else{const p=s.replace(/[()]/g,'').split(/[,\s]+/).filter(Boolean);if(p.length!==2)return{ok:false,note:`請寫成 ${nx}=5, ${ny}=2 或 (5, 2)。`};a=parseNum(p[0]);b=parseNum(p[1]);}
+  if(!a||!b)return{ok:false,note:'看不懂這個寫法。'};if(eq(a.v,x)&&eq(b.v,y))return{ok:true};if(eq(a.v,y)&&eq(b.v,x))return{ok:false,note:'兩個數字的順序寫反了。'};return{ok:false};};}
+function ineqCheck(op,v){return str=>{const s=norm(str).replace(/\s/g,'').replace(/>=/g,'≥').replace(/<=/g,'≤');const m=s.match(/^x(>|<|≥|≤)(-?[\d./]+)$/);
+  if(!m)return{ok:false,note:'請寫成 x > 3 這樣的格式（≥ 可以打成 >=）。'};const p=parseNum(m[2]);if(!p||!eq(p.v,v))return{ok:false};
+  if(m[1]!==op){const flip={'>':'<','<':'>','≥':'≤','≤':'≥'}[op];return{ok:false,note:m[1]===flip?'數字對了，但不等號方向錯了：兩邊乘或除以負數時，不等號要變向。':'不等號不對，注意有沒有「等於」。'};}return{ok:true};};}
+function parseQuad(str){let t=norm(str).replace(/\s/g,'').replace(/x\^2|x²/g,'X');if(!t||!/^[-+0-9xX]+$/.test(t))return null;if(!/^[-+]/.test(t))t='+'+t;
+  const terms=t.match(/[-+][0-9]*[xX]?/g);if(!terms||terms.join('')!==t)return null;let a=0,b=0,c=0;
+  for(const m of terms){const sg=m[0]==='-'?-1:1,body=m.slice(1);if(!body)return null;const k=body.replace(/[xX]$/,'');const n=k===''?1:+k;if(body.endsWith('X'))a+=sg*n;else if(body.endsWith('x'))b+=sg*n;else c+=sg*n;}return{a,b,c};}
+function quad(a,b,c){const t=[];if(a)t.push(a===1?'x²':a===-1?'−x²':neg(a)+'x²');if(b)t.push((t.length?(b>0?' + ':' − '):(b<0?'−':''))+(Math.abs(b)===1?'':Math.abs(b))+'x');if(c)t.push((t.length?(c>0?' + ':' − '):(c<0?'−':''))+Math.abs(c));return t.join('')||'0';}
+function quadCheck(a,b,c){return str=>{const p=parseQuad(str);if(!p)return{ok:false,note:'請寫成 x² + 6x + 9 這樣（x² 可以打成 x^2）。'};
+  if(p.a===a&&p.b===b&&p.c===c)return{ok:true};if(p.a===a&&p.c===c&&p.b===0&&b!==0)return{ok:false,note:'少了中間的 x 項：(x + a)² 要展開成 x² + 2ax + a²。'};return{ok:false};};}
+const svgNL=(lo,hi,marks='',W=420)=>{const X=v=>20+(v-lo)*(W-40)/(hi-lo);let g=`<line x1="10" y1="50" x2="${W-10}" y2="50" stroke="#333" stroke-width="2"/>`;for(let v=lo;v<=hi;v++)g+=`<line x1="${X(v)}" y1="44" x2="${X(v)}" y2="56" stroke="#333"/><text x="${X(v)}" y="74" font-size="12" text-anchor="middle">${neg(v)}</text>`;return{g:g+marks,X};};
+
+/* ---------- 分數乘除 ---------- */
+MOD['F-muldiv']={
+  goal:'會做分數乘法（先約分再乘），知道除以一個分數等於乘以它的倒數。',
+  wrong:{h:`常見的錯：${F(3,4)} ÷ ${F(5,8)} 直接上下相乘，寫成 ${F(15,32)}；或是乘完沒有約分。`,why:`除法問的是「${F(3,4)} 裡面有幾個 ${F(5,8)}」。${F(5,8)} 比 ${F(3,4)} 小一點，答案應該比 1 大一點，${F(15,32)} 連 1 都不到，一定不對。`},
+  concept:['分數 × 分數：分子乘分子、分母乘分母，能先約分就先約分。','除以一個分數 = 乘以它的倒數（分子分母對調）。','帶分數要先化成假分數再乘除。'],
+  widget:{init:()=>({p:0}),printState:()=>({p:0}),presets:[[2,3,3,4],[1,2,4,5],[3,5,2,3]],
+    render(s){const [a,b,c,d]=this.presets[s.p];const W=240,H=160,x0=100,y0=10;let g='';
+      for(let i=0;i<b;i++)for(let j=0;j<d;j++){const inA=i<a,inC=j<c;g+=`<rect x="${x0+i*W/b}" y="${y0+j*H/d}" width="${W/b}" height="${H/d}" fill="${inA&&inC?'#7a5cc4':inA?'#cfe1f7':inC?'#f6d7a8':'#fff'}" stroke="#333"/>`;}
+      return `<svg viewBox="0 0 440 ${H+40}" class="wsvg">${g}<text x="${x0}" y="${H+30}" font-size="13">直的切 ${b} 份取 ${a} 份（${a}/${b}），橫的切 ${d} 份取 ${c} 份（${c}/${d}）</text></svg>
+      <p class="wmsg">紫色是兩者重疊的部分：${a*c} 格，全部共有 ${b*d} 格，所以 ${F(a,b)} × ${F(c,d)} = ${F(a*c,b*d)}${gcd(a*c,b*d)>1?' = '+fh(R(a*c,b*d)):''}。除法就換成乘倒數：${F(a,b)} ÷ ${F(c,d)} = ${F(a,b)} × ${F(d,c)} = ${fh(R(a*d,b*c))}。</p>`;},
+    controls(s){return `<div class="wctl">換一題：${this.presets.map((p,i)=>`<button class="chip" data-act="p" data-v="${i}" aria-pressed="${s.p===i}">${p[0]}/${p[1]} × ${p[2]}/${p[3]}</button>`).join('')}</div>`;},
+    act(s,a,v){s.p=+v;}},
+  example:{q:`${F(3,4)} ÷ ${F(5,8)} = ?`,steps:[`除以 ${F(5,8)} 改成乘以倒數 ${F(8,5)}：${F(3,4)} × ${F(8,5)}。`,`先約分：4 和 8 約成 1 和 2，變成 ${F(3,1)} × ${F(2,5)}。`,`3 × 2 = 6，1 × 5 = 5，答案 ${F(6,5)}（= 1${F(1,5)}）。`]},
+  tiers:[
+   r=>{const b=pick(r,[3,4,5,6,8]),d=pick(r,[3,4,5,6,9]);const a=cop(r,b),c=cop(r,d);const x=mul(R(a,b),R(c,d));return{h:`${F(a,b)} × ${F(c,d)} =`,key:ftxt(x),check:numCheck(x,{simplest:true}),hint:'分子乘分子、分母乘分母，可以先交叉約分。'};},
+   r=>{const b=pick(r,[2,3,4,5,6]),d=pick(r,[3,4,5,7,8]);const a=cop(r,b),c=cop(r,d);const x=div(R(a,b),R(c,d));return{h:`${F(a,b)} ÷ ${F(c,d)} =`,key:ftxt(x),check:numCheck(x,{simplest:true}),hint:`改成乘倒數：${F(a,b)} × ${F(d,c)}。`};},
+   r=>{const w=ri(r,1,3),b=pick(r,[2,3,4]),a=cop(r,b),d=pick(r,[3,4,5,6]),c=cop(r,d);const op=r()<.5;const A=R(w*b+a,b);const x=op?mul(A,R(c,d)):div(A,R(c,d));
+     return{h:`${w}${F(a,b)} ${op?'×':'÷'} ${F(c,d)} =`,key:ftxt(x),check:numCheck(x,{simplest:true}),hint:`先把 ${w}${F(a,b)} 化成假分數 ${F(w*b+a,b)}${op?'':'，再乘以倒數'}。`};}]
+};
+
+/* ---------- 三角形面積 ---------- */
+MOD['M-tri']={
+  goal:'知道三角形面積 = 底 × 高 ÷ 2，也能由面積反推底或高。',
+  wrong:{h:'常見的錯：底 10、高 6 的三角形，面積算成 60（忘記除以 2）。',why:'三角形是同底同高的長方形（或平行四邊形）的一半，所以要除以 2。'},
+  concept:['三角形面積 = 底 × 高 ÷ 2。','高要和底垂直，不一定是斜邊。','反推：高 = 面積 × 2 ÷ 底。'],
+  widget:{init:()=>({t:.5}),printState:()=>({t:.3}),
+    render(s){const x0=60,W=300,H=140,ax=x0+W*s.t;return `<svg viewBox="0 0 440 180" class="wsvg"><rect x="${x0}" y="20" width="${W}" height="${H}" fill="#f6d7a8" stroke="#333" stroke-dasharray="5 4"/>
+      <polygon points="${x0},${20+H} ${x0+W},${20+H} ${ax},20" fill="#4f8fd8" opacity=".85" stroke="#333"/><line x1="${ax}" y1="20" x2="${ax}" y2="${20+H}" stroke="#d23c3c" stroke-width="2" stroke-dasharray="4 3"/>
+      <text x="${x0+W/2}" y="176" font-size="14" text-anchor="middle">底</text><text x="${ax+6}" y="${20+H/2}" font-size="14" fill="#d23c3c">高</text></svg>
+      <p class="wmsg">藍色三角形的頂點不管移到哪裡，左右兩塊橘色加起來都剛好和藍色一樣大，所以三角形 = 長方形的一半 = 底 × 高 ÷ 2。</p>`;},
+    controls(s){return `<div class="wctl">移動頂點：${[.1,.3,.5,.7,.9].map(v=>`<button class="chip" data-act="t" data-v="${v}" aria-pressed="${s.t===v}">${Math.round(v*10)}</button>`).join('')}</div>`;},
+    act(s,a,v){s.t=+v;}},
+  example:{q:'一個三角形面積 36 平方公分，底 9 公分，高是多少？',steps:['面積 = 底 × 高 ÷ 2，所以底 × 高 = 36 × 2 = 72。','高 = 72 ÷ 9 = 8 公分。','檢查：9 × 8 ÷ 2 = 36。']},
+  tiers:[
+   r=>{const b=ri(r,3,16),h=ri(r,2,12)*(b%2?2:1);return{h:`底 ${b} 公分、高 ${h} 公分的三角形，面積是多少平方公分？`,key:String(b*h/2),check:numCheck(R(b*h,2)),hint:`${b} × ${h} ÷ 2。`};},
+   r=>{const b=ri(r,4,14),h=ri(r,3,12);const A=R(b*h,2);return{h:`三角形的面積是 ${ftxt(A).replace('/','／')==ftxt(A)?ftxt(A):fh(A)} 平方公分，底是 ${b} 公分，高是多少公分？`,key:String(h),check:numCheck(R(h)),hint:`高 = 面積 × 2 ÷ 底。`};},
+   r=>{const a=ri(r,3,10),b=a+ri(r,2,8),h=ri(r,2,10)*((a+b)%2?2:1);return{h:`上底 ${a}、下底 ${b}、高 ${h} 公分的梯形，面積是多少平方公分？（提示：切成兩個三角形）`,key:String((a+b)*h/2),check:numCheck(R((a+b)*h,2)),hint:`兩個三角形：${a} × ${h} ÷ 2 和 ${b} × ${h} ÷ 2，加起來 = (${a} + ${b}) × ${h} ÷ 2。`};}]
+};
+
+/* ---------- 長方體體積 ---------- */
+MOD['M-vol']={
+  goal:'知道長方體體積 = 長 × 寬 × 高，會用體積求高，並認識 1 公升 = 1000 立方公分。',
+  wrong:{h:'常見的錯：長 5、寬 4、高 3 的長方體，把三個數相加得到 12。',why:'體積是「可以放幾個 1 立方公分的小方塊」：底層放 5 × 4 = 20 個，疊 3 層，共 60 個。'},
+  concept:['體積 = 長 × 寬 × 高（底面積 × 高）。','底層有幾個小方塊 × 疊幾層 = 總數。','1 公升 = 1000 立方公分，1 毫升 = 1 立方公分。'],
+  widget:{init:()=>({l:4,w:3,h:2}),printState:()=>({l:4,w:3,h:3}),
+    render(s){const u=30,dx=14,dy=10;let g='';
+      for(let z=0;z<s.h;z++)for(let y=s.w-1;y>=0;y--)for(let x=0;x<s.l;x++){const X=110+x*u+y*dx,Y=200-z*u-y*dy;
+        g+=`<polygon points="${X},${Y} ${X+u},${Y} ${X+u},${Y-u} ${X},${Y-u}" fill="#a9c9ef" stroke="#335"/><polygon points="${X},${Y-u} ${X+u},${Y-u} ${X+u+dx},${Y-u-dy} ${X+dx},${Y-u-dy}" fill="#cfe1f7" stroke="#335"/><polygon points="${X+u},${Y} ${X+u+dx},${Y-dy} ${X+u+dx},${Y-u-dy} ${X+u},${Y-u}" fill="#7fa9db" stroke="#335"/>`;}
+      return `<svg viewBox="0 0 440 210" class="wsvg">${g}</svg><p class="wmsg">底層：長 ${s.l} × 寬 ${s.w} = ${s.l*s.w} 個；疊 ${s.h} 層 → ${s.l*s.w} × ${s.h} = <b>${s.l*s.w*s.h} 立方公分</b>。</p>`;},
+    controls(s){const row=(k,lab,vals)=>`<div class="wctl">${lab}：${vals.map(v=>`<button class="chip" data-act="${k}" data-v="${v}" aria-pressed="${s[k]===v}">${v}</button>`).join('')}</div>`;return row('l','長',[2,3,4,5])+row('w','寬',[1,2,3])+row('h','高（層數）',[1,2,3,4]);},
+    act(s,a,v){s[a]=+v;}},
+  example:{q:'長 20、寬 15 公分的魚缸，倒入 3 公升的水，水深幾公分？',steps:['3 公升 = 3000 立方公分。','底面積 = 20 × 15 = 300 平方公分。','水深 = 3000 ÷ 300 = 10 公分。']},
+  tiers:[
+   r=>{const l=ri(r,2,12),w=ri(r,2,9),h=ri(r,2,8);return{h:`長 ${l}、寬 ${w}、高 ${h} 公分的長方體，體積是多少立方公分？`,key:String(l*w*h),check:numCheck(R(l*w*h)),hint:`${l} × ${w} × ${h}。`};},
+   r=>{const l=ri(r,3,10),w=ri(r,2,8),h=ri(r,2,9);return{h:`長方體的體積是 ${l*w*h} 立方公分，長 ${l} 公分、寬 ${w} 公分，高是多少公分？`,key:String(h),check:numCheck(R(h)),hint:`高 = 體積 ÷（長 × 寬）= ${l*w*h} ÷ ${l*w}。`};},
+   r=>{const l=pick(r,[10,20,25,30]),w=pick(r,[10,20,40]);const h=ri(r,2,15);const V=l*w*h;const ok=V%1000===0;return ok?{h:`長 ${l}、寬 ${w} 公分的水箱，倒入 ${V/1000} 公升的水，水深幾公分？`,key:String(h),check:numCheck(R(h)),hint:`${V/1000} 公升 = ${V} 立方公分，再除以底面積 ${l*w}。`}
+     :{h:`長 ${l}、寬 ${w} 公分的水箱，倒入 ${V} 毫升的水，水深幾公分？`,key:String(h),check:numCheck(R(h)),hint:`1 毫升 = 1 立方公分，${V} ÷ ${l*w}。`};}]
+};
+
+/* ---------- 小數的四則運算 ---------- */
+MOD['F-dec']={
+  goal:'小數加減時對齊小數點，小數乘法會數小數位數，除以小數時先把除數變成整數。',
+  wrong:{h:'常見的錯：2.7 + 4.85 寫成 7.12（尾巴對齊）；3.6 × 2.5 寫成 0.9 或 90。',why:'加減要對齊「小數點」才是同樣的位值相加；乘法的小數位數 = 兩個數的小數位數相加。'},
+  concept:['加減：小數點對齊，空位補 0（2.70 + 4.85）。','乘法：先當整數乘，再數兩個數共有幾位小數。','除以小數：除數和被除數的小數點同時往右移，直到除數是整數。'],
+  widget:{init:()=>({p:0}),printState:()=>({p:0}),
+    presets:[{t:'2.7 + 4.85',rows:['&nbsp;&nbsp;2.70','+ 4.85','&nbsp;&nbsp;7.55'],m:'小數點對齊，2.7 補成 2.70，同位值相加：7.55。'},
+      {t:'3.6 × 2.5',rows:['36 × 25 = 900','小數位數：1 + 1 = 2 位','900 → 9.00 = 9'],m:'先當成整數乘，再從右邊數回 2 位小數。'},
+      {t:'4.2 ÷ 0.35',rows:['0.35 → 35（右移 2 位）','4.2 → 420（也右移 2 位）','420 ÷ 35 = 12'],m:'除數和被除數同時放大 100 倍，商不變。'}],
+    render(s){const p=this.presets[s.p];return `<div class="steps" style="font-family:ui-monospace,monospace">${p.rows.map((r,i)=>`<div class="stp now" style="${i===2?'border-top:2px solid currentColor':''}">${r}</div>`).join('')}</div><p class="wmsg">${p.m}</p>`;},
+    controls(s){return `<div class="wctl">${this.presets.map((p,i)=>`<button class="chip" data-act="p" data-v="${i}" aria-pressed="${s.p===i}">${p.t}</button>`).join('')}</div>`;},
+    act(s,a,v){s.p=+v;}},
+  example:{q:'1.25 × 0.4 = ?',steps:['先算 125 × 4 = 500。','小數位數：1.25 有 2 位、0.4 有 1 位，共 3 位。','500 → 0.500 = 0.5。']},
+  tiers:[
+   r=>{const a=ri(r,11,99)/10,b=ri(r,101,999)/100;const op=r()<.6;const x=op?a+b:Math.max(a,b)-Math.min(a,b);const A=op?a:Math.max(a,b),B=op?b:Math.min(a,b);const v=Math.round(x*100)/100;
+     return{h:`${A} ${op?'+':'−'} ${B} =`,key:String(v),check:numCheck(R(Math.round(v*100),100)),hint:'小數點對齊，位數不夠的補 0。'};},
+   r=>{const a=ri(r,11,99),b=ri(r,2,9),pa=pick(r,[1,2]),pb=1;const v=a*b/10**(pa+pb);return{h:`${a/10**pa} × ${b/10**pb} =`,key:String(+v.toFixed(4)),check:numCheck(R(a*b,10**(pa+pb))),hint:`先算 ${a} × ${b} = ${a*b}，小數位數共 ${pa+pb} 位。`};},
+   r=>{const q=ri(r,3,40),d=pick(r,[0.2,0.4,0.5,0.25,0.15,0.35,1.5,2.5]);const n=+(q*d).toFixed(2);return{h:`${n} ÷ ${d} =`,key:String(q),check:numCheck(R(q)),hint:`除數 ${d} 變成整數：兩邊的小數點同時往右移。`};}]
+};
+
+/* ---------- 圓周長與圓面積 ---------- */
+MOD['M-circle']={
+  goal:'分清楚圓周長（2 × 半徑 × 圓周率）和圓面積（半徑 × 半徑 × 圓周率），不把直徑當半徑。',
+  wrong:{h:'常見的錯：半徑 5 的圓面積算成 31.4（其實是周長），或算成 5 × 2 × 3.14 ÷ 2。',why:'周長是「繞一圈的長度」，單位是公分；面積是「圓裡面有多大」，單位是平方公分。面積的公式要乘兩次半徑。'},
+  concept:['圓周長 = 直徑 × 圓周率 = 半徑 × 2 × 圓周率。','圓面積 = 半徑 × 半徑 × 圓周率。','題目給直徑時，先除以 2 得到半徑。'],
+  widget:{init:()=>({r:3}),printState:()=>({r:3}),
+    render(s){const R0=s.r*14,n=12;let g=`<circle cx="90" cy="95" r="${R0}" fill="#cfe1f7" stroke="#333"/><line x1="90" y1="95" x2="${90+R0}" y2="95" stroke="#d23c3c" stroke-width="2"/><text x="${90+R0/2}" y="90" font-size="12" text-anchor="middle" fill="#d23c3c">r=${s.r}</text>`;
+      const w=Math.PI*R0/ (n/2);for(let i=0;i<n;i++){const up=i%2===0,x=200+Math.floor(i/2)*w+(up?0:w/2),y=95;
+        g+=up?`<path d="M${x},${y+R0/2} L${x+w},${y+R0/2} L${x+w/2},${y-R0/2} Z" fill="${i%4?'#a9c9ef':'#7fa9db'}" stroke="#335"/>`:`<path d="M${x},${y-R0/2} L${x+w},${y-R0/2} L${x+w/2},${y+R0/2} Z" fill="${i%4===1?'#a9c9ef':'#7fa9db'}" stroke="#335"/>`;}
+      const C=+(2*s.r*3.14).toFixed(2),A=+(s.r*s.r*3.14).toFixed(2);
+      return `<svg viewBox="0 0 440 190" class="wsvg">${g}<text x="200" y="${95+R0/2+20}" font-size="12">排開：長 ≈ r × 圓周率，寬 = r</text></svg>
+      <p class="wmsg">周長 = ${s.r} × 2 × 3.14 = <b>${C} 公分</b>　面積 = ${s.r} × ${s.r} × 3.14 = <b>${A} 平方公分</b>。把圓切成很多扇形排開，會接近長 r × 3.14、寬 r 的長方形，所以面積 = r × r × 3.14。</p>`;},
+    controls(s){return `<div class="wctl">半徑：${[1,2,3,4,5].map(v=>`<button class="chip" data-act="r" data-v="${v}" aria-pressed="${s.r===v}">${v}</button>`).join('')}</div>`;},
+    act(s,a,v){s.r=+v;}},
+  example:{q:'直徑 10 公分的圓，面積是多少？（圓周率 3.14）',steps:['直徑 10 → 半徑 5。','面積 = 5 × 5 × 3.14。','= 25 × 3.14 = 78.5 平方公分。']},
+  tiers:[
+   r=>{const d=r()<.5;const v=ri(r,2,12);const C=+(d?v*3.14:2*v*3.14).toFixed(2);return{h:`${d?'直徑':'半徑'} ${v} 公分的圓，周長是多少公分？（圓周率 3.14）`,key:String(C),check:numCheck(R(Math.round(C*100),100)),hint:d?'周長 = 直徑 × 3.14。':'周長 = 半徑 × 2 × 3.14。'};},
+   r=>{const v=ri(r,2,10);const A=+(v*v*3.14).toFixed(2);return{h:`半徑 ${v} 公分的圓，面積是多少平方公分？（圓周率 3.14）`,key:String(A),check:numCheck(R(Math.round(A*100),100)),hint:`${v} × ${v} × 3.14。`};},
+   r=>{const v=ri(r,1,6)*2;const half=r()<.5;const A=+((v/2)**2*3.14/(half?2:1)).toFixed(2);return{h:`直徑 ${v} 公分的${half?'半圓':'圓'}，面積是多少平方公分？（圓周率 3.14）`,key:String(A),check:numCheck(R(Math.round(A*100),100)),hint:`半徑 = ${v} ÷ 2 = ${v/2}${half?'；半圓要再除以 2':''}。`};}]
+};
+
+/* ---------- 速率 ---------- */
+MOD['R-rate']={
+  goal:'知道「距離 = 速率 × 時間」，會求距離、時間，並換算速率的單位。',
+  wrong:{h:'常見的錯：時速 60 公里，2.5 小時走多遠，算成 60 ÷ 2.5 = 24。',why:'時速 60 公里是「每 1 小時走 60 公里」，走 2.5 小時就是 2.5 個 60，要用乘法。'},
+  concept:['速率 = 每單位時間走的距離（時速 60 公里 = 每小時 60 公里）。','距離 = 速率 × 時間；時間 = 距離 ÷ 速率。','換算單位：1 公里 = 1000 公尺，1 小時 = 60 分鐘。'],
+  widget:{init:()=>({v:60,t:2.5}),printState:()=>({v:60,t:2.5}),
+    render(s){const W=360,max=5,px=W/max;let g=`<line x1="40" y1="60" x2="${40+W}" y2="60" stroke="#999" stroke-width="2"/>`;
+      for(let i=0;i<=max;i++)g+=`<line x1="${40+i*px}" y1="54" x2="${40+i*px}" y2="66" stroke="#999"/><text x="${40+i*px}" y="84" font-size="11" text-anchor="middle">${i} 時</text>`;
+      for(let i=0;i<Math.ceil(s.t);i++){const w=Math.min(1,s.t-i)*px;g+=`<rect x="${40+i*px}" y="34" width="${w-2}" height="18" fill="${i%2?'#7fa9db':'#a9c9ef'}"/><text x="${40+i*px+w/2}" y="47" font-size="11" text-anchor="middle">${+(s.v*Math.min(1,s.t-i)).toFixed(1)}</text>`;}
+      return `<svg viewBox="0 0 440 100" class="wsvg">${g}</svg><p class="wmsg">每 1 小時走 ${s.v} 公里，走 ${s.t} 小時：${s.v} × ${s.t} = <b>${+(s.v*s.t).toFixed(1)} 公里</b>。每一段代表 1 小時走的距離。</p>`;},
+    controls(s){return `<div class="wctl">時速：${[40,60,80].map(v=>`<button class="chip" data-act="v" data-v="${v}" aria-pressed="${s.v===v}">${v}</button>`).join('')}</div><div class="wctl">時間（小時）：${[1,1.5,2.5,3,4.5].map(v=>`<button class="chip" data-act="t" data-v="${v}" aria-pressed="${s.t===v}">${v}</button>`).join('')}</div>`;},
+    act(s,a,v){s[a]=+v;}},
+  example:{q:'分速 250 公尺，等於時速多少公里？',steps:['1 小時 = 60 分鐘，所以 1 小時走 250 × 60 = 15000 公尺。','15000 公尺 = 15 公里。','時速 15 公里。']},
+  tiers:[
+   r=>{const v=pick(r,[4,5,12,15,40,45,60,72,80]),t=pick(r,[1.5,2,2.5,3,4,0.5]);return{h:`時速 ${v} 公里，走 ${t} 小時，共走多少公里？`,key:String(v*t),check:numCheck(R(Math.round(v*t*10),10)),hint:`距離 = 速率 × 時間 = ${v} × ${t}。`};},
+   r=>{const v=pick(r,[40,50,60,80,90]),t=pick(r,[1.5,2,2.5,3,3.5]);return{h:`從甲地到乙地 ${v*t} 公里，汽車時速 ${v} 公里，要幾小時？`,key:String(t),check:numCheck(R(Math.round(t*10),10)),hint:`時間 = 距離 ÷ 速率 = ${v*t} ÷ ${v}。`};},
+   r=>{const m=pick(r,[50,100,150,200,250,300,500]);return{h:`分速 ${m} 公尺，等於時速多少公里？`,key:String(m*60/1000),check:numCheck(R(m*60,1000)),hint:`1 小時走 ${m} × 60 公尺，再換成公里（÷ 1000）。`};}]
+};
+
+/* ---------- 比例式與正比 ---------- */
+MOD['R-prop']={
+  goal:'會解比例式（內項乘積 = 外項乘積），分辨正比和反比。',
+  wrong:{h:'常見的錯：x : 6 = 4 : 3，算成 x = 6 × 3 ÷ 4 = 4.5（交叉相乘乘錯邊）；把正比當成「一起加多少」。',why:'比例式 a : b = c : d 的意思是兩個比值相等，所以 a × d = b × c（外項乘積 = 內項乘積）。正比是「一起乘幾倍」，不是「一起加幾」。'},
+  concept:['a : b = c : d → a × d = b × c。','正比：y ÷ x 固定（y = kx），x 變 2 倍，y 也變 2 倍。','反比：x × y 固定，x 變 2 倍，y 變成一半。'],
+  widget:{init:()=>({k:3,inv:false}),printState:()=>({k:3,inv:false}),
+    render(s){const xs=[1,2,3,4,6];const ys=xs.map(x=>s.inv?+(12*s.k/4/x).toFixed(2):s.k*x);
+      return `<table class="ptab"><tr><th>x</th>${xs.map(x=>`<td>${x}</td>`).join('')}</tr><tr><th>y</th>${ys.map(y=>`<td><b>${y}</b></td>`).join('')}</tr><tr><th>${s.inv?'x × y':'y ÷ x'}</th>${xs.map((x,i)=>`<td>${s.inv?+(x*ys[i]).toFixed(1):s.k}</td>`).join('')}</tr></table>
+      <p class="wmsg">${s.inv?`反比：x × y 永遠是 ${3*s.k}。x 變大，y 就變小。`:`正比：y ÷ x 永遠是 ${s.k}，也就是 y = ${s.k}x。x 從 2 變 4（2 倍），y 從 ${2*s.k} 變 ${4*s.k}（也是 2 倍）。`}</p>`;},
+    controls(s){return `<div class="wctl"><button class="chip" data-act="m" data-v="0" aria-pressed="${!s.inv}">正比</button><button class="chip" data-act="m" data-v="1" aria-pressed="${s.inv}">反比</button>　k：${[2,3,5].map(v=>`<button class="chip" data-act="k" data-v="${v}" aria-pressed="${s.k===v}">${v}</button>`).join('')}</div>`;},
+    act(s,a,v){if(a==='m')s.inv=v==='1';else s.k=+v;}},
+  example:{q:'x : 6 = 4 : 3，x = ?',steps:['外項是 x 和 3，內項是 6 和 4。','x × 3 = 6 × 4 = 24。','x = 24 ÷ 3 = 8。']},
+  tiers:[
+   r=>{const b=pick(r,[2,3,4,5,6,8]),c=ri(r,2,9),d=pick(r,[2,3,4,5]);const k=ri(r,1,4);const bb=d*k;return{h:`x : ${bb} = ${c} : ${d}，x = ?`,key:String(c*k),check:numCheck(R(c*k)),hint:`外項乘積 = 內項乘積：x × ${d} = ${bb} × ${c}。`};},
+   r=>{const k=ri(r,2,9),x1=ri(r,2,6),x2=ri(r,3,12);return{h:`y 與 x 成正比，x = ${x1} 時 y = ${k*x1}。x = ${x2} 時 y = ?`,key:String(k*x2),check:numCheck(R(k*x2)),hint:`先求 y ÷ x = ${k}，所以 y = ${k}x。`};},
+   r=>{const P=pick(r,[12,24,36,48,60]);const ds=[2,3,4,6,12].filter(d=>P%d===0);const x1=pick(r,ds),x2=pick(r,ds.filter(d=>d!==x1));return{h:`y 與 x 成反比，x = ${x1} 時 y = ${P/x1}。x = ${x2} 時 y = ?`,key:String(P/x2),check:numCheck(R(P,x2)),hint:`反比：x × y 固定 = ${P}。`};}]
+};
+
+/* ---------- 負數運算與乘方 ---------- */
+MOD['A-neg']={
+  goal:'會在數線上做正負數的加減，判斷乘除的正負號，分清楚 (−3)² 和 −3²。',
+  wrong:{h:'常見的錯：−3² = 9；(−12) ÷ (−3) × (−2) 算成 −2；把 −5 當成比 −2 大。',why:'−3² 的指數只作用在 3 上，意思是 −(3 × 3) = −9；(−3)² 才是 (−3) × (−3) = 9。在數線上，越往左越小，所以 −5 < −2。'},
+  concept:['數線上越右邊越大：−5 < −2 < 0 < 3。','加一個正數往右走，加一個負數（或減一個正數）往左走。','乘除：同號得正、異號得負；負號的個數是奇數，結果就是負的。','−a² = −(a × a)，(−a)² = (−a) × (−a)。'],
+  widget:{init:()=>({a:-3,op:'+',b:5}),printState:()=>({a:-3,op:'-',b:4}),
+    render(s){const res=s.op==='+'?s.a+s.b:s.a-s.b;const N=svgNL(-10,10);const x1=N.X(s.a),x2=N.X(res);
+      const mk=`<circle cx="${x1}" cy="50" r="6" fill="#4f8fd8"/><circle cx="${x2}" cy="50" r="6" fill="#d23c3c"/><path d="M${x1},36 Q${(x1+x2)/2},${10} ${x2},36" fill="none" stroke="#d23c3c" stroke-width="2" marker-end="url(#ar)"/>`;
+      return `<svg viewBox="0 0 440 90" class="wsvg"><defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#d23c3c"/></marker></defs>${N.g}${mk}</svg>
+      <p class="wmsg">從 ${neg(s.a)} 出發，${s.op==='+'?(s.b>=0?'加正數往右':'加負數往左'):(s.b>=0?'減正數往左':'減負數 = 加正數，往右')}走 ${Math.abs(s.b)} 格，到 <b>${neg(res)}</b>。</p>`;},
+    controls(s){return `<div class="wctl">起點：${[-6,-3,0,2].map(v=>`<button class="chip" data-act="a" data-v="${v}" aria-pressed="${s.a===v}">${neg(v)}</button>`).join('')}</div>
+      <div class="wctl">運算：<button class="chip" data-act="op" data-v="+" aria-pressed="${s.op==='+'}">加</button><button class="chip" data-act="op" data-v="-" aria-pressed="${s.op==='-'}">減</button>　${[5,4,-2,-4].map(v=>`<button class="chip" data-act="b" data-v="${v}" aria-pressed="${s.b===v}">${v<0?'('+neg(v)+')':v}</button>`).join('')}</div>`;},
+    act(s,a,v){if(a==='op')s.op=v;else s[a]=+v;if(Math.abs(s.op==='+'?s.a+s.b:s.a-s.b)>10)s.b=s.b>0?2:-2;}},
+  example:{q:'(−2)³ − (−4)² ÷ 8 = ?',steps:['乘方先算：(−2)³ = −8（三個負號 → 負），(−4)² = 16。','再算除法：16 ÷ 8 = 2，變成 −8 − 2。','−8 − 2 = −10。']},
+  tiers:[
+   r=>{const a=ri(r,-15,15),b=ri(r,1,15);const t=pick(r,['+-','--','-+']);const exp=t==='+-'?`${neg(a)} + (−${b})`:t==='--'?`${neg(a)} − (−${b})`:`${neg(a)} − ${b}`;const v=t==='--'?a+b:a-b;
+     return{h:`${exp} =`,key:neg(v),check:numCheck(R(v)),hint:t==='--'?'減一個負數 = 加一個正數。':'加負數、減正數，都是在數線上往左走。'};},
+   r=>{const k=pick(r,[0,1,2]);if(k===0){const a=ri(r,2,6);const neg1=r()<.5;return{h:`${neg1?'−'+a+'²':'(−'+a+')²'} =`,key:neg(neg1?-a*a:a*a),check:numCheck(R(neg1?-a*a:a*a)),hint:'看指數作用在誰身上：有括號才是整個 (−a) 自乘。'};}
+     const a=ri(r,2,6),b=ri(r,2,5),c=ri(r,2,4);const sa=pick(r,[1,-1]),sb=pick(r,[1,-1]),sc=pick(r,[1,-1]);const A=sa*a*b,B=sb*b,C=sc*c;const v=A/B*C;
+     const p=n=>n<0?`(${neg(n)})`:String(n);return{h:`${p(A)} ÷ ${p(B)} × ${p(C)} =`,key:neg(v),check:numCheck(R(v)),hint:'乘除由左到右；先數負號個數決定正負。'};},
+   r=>{const p=R(pick(r,[-1,-2,-3,1]),pick(r,[2,3,4]));const q=R(1,pick(r,[2,3]));const t=R(-pick(r,[1,2,3,4]),pick(r,[3,5]));const v=add(p,mul(q,t));
+     return{h:`(${fh(p)}) + ${fh(q)} × (${fh(t)}) =`,key:ftxt(v),check:numCheck(v,{simplest:true}),hint:'先乘後加，注意正負號。'};}]
+};
+
+/* ---------- 指數律 ---------- */
+MOD['A-exp']={
+  goal:'用「數有幾個相乘」理解指數律，會用科學記號表示很大或很小的數。',
+  wrong:{h:'常見的錯：2³ × 2⁴ = 2¹²（指數相乘）或 4⁷（底數相乘）。',why:'2³ 是 3 個 2 相乘，2⁴ 是 4 個 2 相乘，合起來是 3 + 4 = 7 個 2 相乘，所以是 2⁷。'},
+  concept:['aᵐ × aⁿ = aᵐ⁺ⁿ（個數相加）。','aᵐ ÷ aⁿ = aᵐ⁻ⁿ（個數相減）。','(aᵐ)ⁿ = aᵐˣⁿ（m 個一組，共 n 組）。','科學記號：a × 10ⁿ，1 ≤ a < 10。'],
+  widget:{init:()=>({m:3,n:4}),printState:()=>({m:3,n:4}),
+    render(s){const box=(k,col)=>Array.from({length:k},()=>`<span style="display:inline-block;min-width:26px;padding:3px 0;margin:2px;border-radius:5px;background:${col};text-align:center;color:#111">2</span>`).join('×');
+      return `<div style="font-size:16px;line-height:2">2<sup>${s.m}</sup> × 2<sup>${s.n}</sup> = ${box(s.m,'#cfe1f7')} × ${box(s.n,'#f6d7a8')}</div><p class="wmsg">藍色 ${s.m} 個 2、橘色 ${s.n} 個 2，一共 ${s.m+s.n} 個 2 相乘，所以 2<sup>${s.m}</sup> × 2<sup>${s.n}</sup> = <b>2<sup>${s.m+s.n}</sup></b>，不是 2<sup>${s.m*s.n}</sup>。</p>`;},
+    controls(s){return `<div class="wctl">左邊：${[2,3,4].map(v=>`<button class="chip" data-act="m" data-v="${v}" aria-pressed="${s.m===v}">2^${v}</button>`).join('')}　右邊：${[2,3,4,5].map(v=>`<button class="chip" data-act="n" data-v="${v}" aria-pressed="${s.n===v}">2^${v}</button>`).join('')}</div>`;},
+    act(s,a,v){s[a]=+v;}},
+  example:{q:'(3 × 10⁴) × (2 × 10³) = ?',steps:['前面的數相乘：3 × 2 = 6。','10 的次方相乘，指數相加：10⁴ × 10³ = 10⁷。','答案 6 × 10⁷。']},
+  tiers:[
+   r=>{const b=pick(r,[2,3,5,7,'a']),m=ri(r,2,6),n=ri(r,2,6);return{h:`${b}<sup>${m}</sup> × ${b}<sup>${n}</sup> = ${b}<sup>□</sup>，□ = ?`,key:String(m+n),check:numCheck(R(m+n)),hint:'個數相加。'};},
+   r=>{const b=pick(r,[2,3,5,'x']);if(r()<.5){const m=ri(r,6,12),n=ri(r,2,5);return{h:`${b}<sup>${m}</sup> ÷ ${b}<sup>${n}</sup> = ${b}<sup>□</sup>，□ = ?`,key:String(m-n),check:numCheck(R(m-n)),hint:'相除時個數相減。'};}
+     const m=ri(r,2,5),n=ri(r,2,4);return{h:`(${b}<sup>${m}</sup>)<sup>${n}</sup> = ${b}<sup>□</sup>，□ = ?`,key:String(m*n),check:numCheck(R(m*n)),hint:`${m} 個一組，共 ${n} 組。`};},
+   r=>{if(r()<.5){const a=ri(r,2,4),b=ri(r,2,2),m=ri(r,2,6),n=ri(r,2,5);return{h:`(${a} × 10<sup>${m}</sup>) × (${b} × 10<sup>${n}</sup>) = ${a*b} × 10<sup>□</sup>，□ = ?`,key:String(m+n),check:numCheck(R(m+n)),hint:'10 的次方相乘，指數相加。'};}
+     const d=ri(r,11,99),k=ri(r,2,5);const num='0.'+'0'.repeat(k-1)+d;return{h:`${num} 用科學記號寫成 ${(d/10).toFixed(1)} × 10<sup>□</sup>，□ = ?`,key:String(-k),check:numCheck(R(-k)),hint:'小數點往右移幾位，指數就是負幾。'};}]
+};
+
+/* ---------- 二元一次聯立方程式 ---------- */
+MOD['A-sys']={
+  goal:'會用加減消去法和代入消去法解二元一次聯立方程式，並把解代回檢查。',
+  wrong:{h:'常見的錯：x + y = 7、x − y = 3 兩式相加得 2x = 10 後，寫成 x = 10；或把 x、y 寫反。',why:'2x = 10 代表兩個 x 是 10，還要除以 2；求出 x 以後，再代回其中一式求 y，最後兩式都要檢查。'},
+  concept:['目標：把兩個未知數消掉一個，變成一元一次方程式。','加減消去：兩式相加或相減，讓某個未知數的係數變成 0（必要時先把一式乘上某數）。','代入消去：把「y = …」代進另一式。','解出來後代回兩式檢查。'],
+  widget:{init:()=>({k:0,step:0}),printState:()=>({k:0,step:3}),
+    sets:[{e:['x + y = 7','x − y = 3'],s:['兩式相加：y 和 −y 抵消','2x = 10 → x = 5','代回第一式：5 + y = 7 → y = 2'],a:'(5, 2)'},
+          {e:['2x + 3y = 12','3x − y = 7'],s:['第二式乘 3：9x − 3y = 21','和第一式相加：11x = 33 → x = 3','代回：3·3 − y = 7 → y = 2'],a:'(3, 2)'},
+          {e:['y = 2x + 1','3x + y = 11'],s:['把 y = 2x + 1 代入第二式','3x + (2x + 1) = 11 → 5x = 10 → x = 2','y = 2·2 + 1 = 5'],a:'(2, 5)'}],
+    render(s){const q=this.sets[s.k];return `<div style="font-size:19px;border-left:4px solid #4f8fd8;padding-left:12px">${q.e.map(x=>`<div>${x}</div>`).join('')}</div>
+      <div class="steps" style="margin-top:8px">${q.s.slice(0,s.step).map(x=>`<div class="stp now">${x}</div>`).join('')}</div><p class="wmsg">${s.step>=3?`解是 x、y = ${q.a}。代回兩個式子都成立。`:'按「下一步」看怎麼消去一個未知數。'}</p>`;},
+    controls(s){return `<div class="wctl">${s.step<3?'<button class="chip big" data-act="n">下一步</button>':''}${this.sets.map((q,i)=>`<button class="chip" data-act="k" data-v="${i}" aria-pressed="${s.k===i}">第 ${i+1} 組</button>`).join('')}</div>`;},
+    act(s,a,v){if(a==='n')s.step++;else{s.k=+v;s.step=0;}}},
+  example:{q:'解 x + 2y = 8、3x − 2y = 8',steps:['兩式相加，2y 和 −2y 抵消：4x = 16，x = 4。','代回第一式：4 + 2y = 8，y = 2。','檢查第二式：12 − 4 = 8 ✓。答案 x = 4, y = 2。']},
+  tiers:[
+   r=>{const x=ri(r,-3,9),y=ri(r,-3,9);return{h:`解聯立方程式：x + y = ${neg(x+y)}，x − y = ${neg(x-y)}（寫成 x=…, y=…）`,key:`x = ${x}, y = ${y}`,check:pairCheck(x,y),hint:'兩式相加消去 y。'};},
+   r=>{const x=ri(r,-2,6),y=ri(r,-3,9);const m=ri(r,2,4),b=y-m*x,p=ri(r,1,4);return{h:`解聯立方程式：y = ${m}x${b?sgn(b):''}，${p}x + y = ${neg(p*x+y)}（寫成 x=…, y=…）`,key:`x = ${x}, y = ${y}`,check:pairCheck(x,y),hint:`把 y = ${m}x${b?sgn(b):''} 代入第二式。`};},
+   r=>{let a,b,c,d,x,y;do{a=ri(r,1,4);b=ri(r,1,4);c=ri(r,1,4);d=-ri(r,1,3);x=ri(r,-3,6);y=ri(r,-3,6);}while(a*d-b*c===0);
+     const L=(p,q)=>`${p===1?'':p}x ${q<0?'−':'+'} ${Math.abs(q)===1?'':Math.abs(q)}y`;return{h:`解聯立方程式：${L(a,b)} = ${neg(a*x+b*y)}，${L(c,d)} = ${neg(c*x+d*y)}（寫成 x=…, y=…）`,key:`x = ${x}, y = ${y}`,check:pairCheck(x,y),hint:'先把一式乘上某數，讓 y 的係數相反，再相加。'};}]
+};
+
+/* ---------- 坐標與直線 ---------- */
+MOD['N-coord']={
+  goal:'會判斷點在哪個象限，找出直線 y = ax + b 和兩軸的交點，判斷點是否在直線上。',
+  wrong:{h:'常見的錯：(−3, 4) 說在第四象限（x、y 搞混）；y = 2x − 3 和 y 軸的交點寫成 (−3, 0)。',why:'坐標寫成 (x, y)：先左右、再上下。和 y 軸相交的點在 y 軸上，x 一定是 0，所以是 (0, b)。'},
+  concept:['(x, y)：x 是左右（右正左負），y 是上下（上正下負）。','象限：右上一、左上二、左下三、右下四。','和 y 軸的交點：令 x = 0，得到 (0, b)；和 x 軸的交點：令 y = 0。'],
+  widget:{init:()=>({x:-3,y:4,a:2,b:-3}),printState:()=>({x:-3,y:4,a:2,b:-3}),
+    render(s){const S=18,O=150,X=v=>O+v*S,Y=v=>O-v*S;let g='';for(let i=-7;i<=7;i++)g+=`<line x1="${X(i)}" y1="${Y(7.5)}" x2="${X(i)}" y2="${Y(-7.5)}" stroke="#e5e8ee"/><line x1="${X(-7.5)}" y1="${Y(i)}" x2="${X(7.5)}" y2="${Y(i)}" stroke="#e5e8ee"/>`;
+      g+=`<line x1="${X(-8)}" y1="${O}" x2="${X(8)}" y2="${O}" stroke="#666"/><line x1="${O}" y1="${Y(8)}" x2="${O}" y2="${Y(-8)}" stroke="#666"/><text x="${X(4)}" y="${Y(6)}" fill="#999" font-size="14">一</text><text x="${X(-5)}" y="${Y(6)}" fill="#999" font-size="14">二</text><text x="${X(-5)}" y="${Y(-5)}" fill="#999" font-size="14">三</text><text x="${X(4)}" y="${Y(-5)}" fill="#999" font-size="14">四</text>`;
+      const x1=-8,x2=8;g+=`<line x1="${X(x1)}" y1="${Y(s.a*x1+s.b)}" x2="${X(x2)}" y2="${Y(s.a*x2+s.b)}" stroke="#d23c3c" stroke-width="2.5"/><circle cx="${X(0)}" cy="${Y(s.b)}" r="5" fill="#d23c3c"/>`;
+      g+=`<line x1="${X(s.x)}" y1="${O}" x2="${X(s.x)}" y2="${Y(s.y)}" stroke="#4f8fd8" stroke-dasharray="3 3"/><line x1="${O}" y1="${Y(s.y)}" x2="${X(s.x)}" y2="${Y(s.y)}" stroke="#4f8fd8" stroke-dasharray="3 3"/><circle cx="${X(s.x)}" cy="${Y(s.y)}" r="6" fill="#4f8fd8"/>`;
+      const q=s.x>0&&s.y>0?'第一':s.x<0&&s.y>0?'第二':s.x<0&&s.y<0?'第三':s.x>0&&s.y<0?'第四':'坐標軸上';
+      return `<div class="graphwrap"><svg viewBox="0 0 300 300" class="wsvg sq" style="overflow:hidden">${g}</svg><div><p class="wmsg">藍點 (${neg(s.x)}, ${neg(s.y)})：先往${s.x<0?'左':'右'} ${Math.abs(s.x)} 格，再往${s.y<0?'下':'上'} ${Math.abs(s.y)} 格，在<b>${q}${q.endsWith('上')?'':'象限'}</b>。</p><p class="wmsg">紅線 y = ${s.a}x${sgn(s.b)}：令 x = 0 得 y = ${neg(s.b)}，和 y 軸交在 <b>(0, ${neg(s.b)})</b>。</p></div></div>`;},
+    controls(s){return `<div class="wctl">藍點：${[[-3,4],[3,4],[-2,-5],[4,-2]].map(([x,y])=>`<button class="chip" data-act="p" data-v="${x},${y}" aria-pressed="${s.x===x&&s.y===y}">(${neg(x)}, ${neg(y)})</button>`).join('')}</div>
+      <div class="wctl">紅線：${[[2,-3],[1,2],[-1,4]].map(([a,b])=>`<button class="chip" data-act="l" data-v="${a},${b}" aria-pressed="${s.a===a&&s.b===b}">y = ${a===1?'':a===-1?'−':a}x${sgn(b)}</button>`).join('')}</div>`;},
+    act(s,a,v){const [p,q]=v.split(',').map(Number);if(a==='p'){s.x=p;s.y=q;}else{s.a=p;s.b=q;}}},
+  example:{q:'直線 y = −2x + 6 和兩軸的交點？',steps:['和 y 軸：令 x = 0，y = 6 → (0, 6)。','和 x 軸：令 y = 0，0 = −2x + 6，x = 3 → (3, 0)。','畫圖時把這兩點連起來就是這條直線。']},
+  tiers:[
+   r=>{let x,y;do{x=ri(r,-8,8);y=ri(r,-8,8);}while(!x||!y);const q=x>0&&y>0?0:x<0&&y>0?1:x<0?2:3;const names=['第一象限','第二象限','第三象限','第四象限'];
+     return{h:`點 (${neg(x)}, ${neg(y)}) 在哪一個象限？`,mc:names,ans:q,key:names[q],hint:'先看 x 的正負（左右），再看 y 的正負（上下）。'};},
+   r=>{const a=pick(r,[-3,-2,-1,2,3,4]),b=ri(r,-8,8)||5;return{h:`直線 y = ${a===1?'':a===-1?'−':neg(a)}x${sgn(b)} 和 y 軸的交點坐標是？（寫成 (x, y)）`,key:`(0, ${neg(b)})`,check:pairCheck(0,b,'x','y'),hint:'在 y 軸上的點，x = 0。'};},
+   r=>{const a=pick(r,[-3,-2,2,3]),x0=ri(r,-4,4),b=ri(r,-6,6);return{h:`直線 y = ${neg(a)}x${b?sgn(b):''} 和 x 軸的交點坐標是？（寫成 (x, y)）`,key:`(${ftxt(R(-b,a))}, 0)`,check:pairCheck(R(-b,a),R(0),'x','y'),hint:'在 x 軸上的點，y = 0，解 0 = ax + b。'};}]
+};
+
+/* ---------- 一元一次不等式 ---------- */
+MOD['A-ineq']={
+  goal:'會解一元一次不等式，特別是乘或除以負數時，不等號要變向，並能在數線上表示解。',
+  wrong:{h:'常見的錯：−2x > 6，兩邊除以 −2 得到 x > −3。',why:'2 < 5，兩邊乘以 −1 變成 −2 和 −5，在數線上 −2 在 −5 的右邊，所以 −2 > −5：大小關係反過來了。因此除以 −2 時，不等號要變向：x < −3。'},
+  concept:['不等式兩邊同加、同減一個數，不等號不變。','兩邊同乘、同除一個正數，不等號不變。','兩邊同乘、同除一個負數，不等號要變向。','數線上：> 或 < 用空心圓，≥ 或 ≤ 用實心圓。'],
+  widget:{init:()=>({flip:false}),printState:()=>({flip:true}),
+    render(s){const N=svgNL(-6,6);const a=s.flip?-2:2,b=s.flip?-5:5;const mk=`<circle cx="${N.X(a)}" cy="50" r="7" fill="#4f8fd8"/><circle cx="${N.X(b)}" cy="50" r="7" fill="#e39b3b"/><text x="${N.X(a)}" y="30" font-size="14" text-anchor="middle">${neg(a)}</text><text x="${N.X(b)}" y="30" font-size="14" text-anchor="middle">${neg(b)}</text>`;
+      return `<svg viewBox="0 0 440 90" class="wsvg">${N.g}${mk}</svg><p class="wmsg">${s.flip?'兩邊乘以 −1：−2 和 −5。−2 在右邊，所以 <b>−2 > −5</b>，不等號變向了。':'原本：2 < 5（藍點在橘點左邊）。按「兩邊乘以 −1」看看會怎樣。'}</p>`;},
+    controls(s){return `<div class="wctl"><button class="chip big" data-act="f">${s.flip?'回到 2 < 5':'兩邊乘以 −1'}</button></div>`;},
+    act(s){s.flip=!s.flip;}},
+  example:{q:'解 3 − 2x ≥ 11',steps:['兩邊減 3：−2x ≥ 8。','兩邊除以 −2，不等號變向：x ≤ −4。','數線上在 −4 畫實心圓，往左畫。']},
+  tiers:[
+   r=>{const a=ri(r,-9,9)||4,c=ri(r,-9,9);const op=pick(r,['>','<','≥','≤']);return{h:`解不等式：x${sgn(a)} ${op} ${neg(c+a)}（寫成 x > 3 的形式）`,key:`x ${op} ${neg(c)}`,check:ineqCheck(op,R(c)),hint:`兩邊${a>0?'減':'加'} ${Math.abs(a)}，不等號不變。`};},
+   r=>{const a=pick(r,[-5,-4,-3,-2,2,3,4]),c=ri(r,-6,6);const op=pick(r,['>','<','≥','≤']);const flip={'>':'<','<':'>','≥':'≤','≤':'≥'};const op2=a<0?flip[op]:op;
+     return{h:`解不等式：${neg(a)}x ${op} ${neg(a*c)}（寫成 x > 3 的形式）`,key:`x ${op2} ${neg(c)}`,check:ineqCheck(op2,R(c)),hint:a<0?`兩邊除以 ${neg(a)}，是負數，不等號要變向。`:`兩邊除以 ${a}，不等號不變。`};},
+   r=>{const a=pick(r,[-4,-3,-2,2,3]),b=ri(r,1,5),c=ri(r,-4,6);const op=pick(r,['>','≤']);const flip={'>':'<','≤':'≥'};const op2=a<0?flip[op]:op;const k=ri(r,-5,5);const rhs=a*(c-b)+k;
+     return{h:`解不等式：${neg(a)}(x − ${b})${k?sgn(k):''} ${op} ${neg(rhs)}（寫成 x > 3 的形式）`,key:`x ${op2} ${neg(c)}`,check:ineqCheck(op2,R(c)),hint:`先移項、去括號（${neg(a)} 要乘到兩項），最後除以 ${neg(a)}${a<0?'，記得變向':''}。`};}]
+};
+
+/* ---------- 乘法公式與因式分解 ---------- */
+MOD['A-poly']={
+  goal:'會用 (a + b)² = a² + 2ab + b²、(a + b)(a − b) = a² − b² 展開，也能反過來因式分解。',
+  wrong:{h:'常見的錯：(x + 3)² = x² + 9；x² − 9 分解成 (x − 3)²。',why:'(x + 3)² 是 (x + 3)(x + 3)，畫成正方形會有四塊：x²、3x、3x、9，中間兩塊不能漏。(x − 3)² 展開是 x² − 6x + 9，不是 x² − 9。'},
+  concept:['(a + b)² = a² + 2ab + b²；(a − b)² = a² − 2ab + b²。','(a + b)(a − b) = a² − b²（平方差）。','因式分解是展開的相反：看到 x² − 9 = x² − 3²，就是 (x + 3)(x − 3)。'],
+  widget:{init:()=>({b:3}),printState:()=>({b:3}),
+    render(s){const x=120,u=22,b=s.b*u,x0=60,y0=15;
+      return `<svg viewBox="0 0 440 ${x+b+40}" class="wsvg"><rect x="${x0}" y="${y0}" width="${x}" height="${x}" fill="#cfe1f7" stroke="#333"/><rect x="${x0+x}" y="${y0}" width="${b}" height="${x}" fill="#f6d7a8" stroke="#333"/><rect x="${x0}" y="${y0+x}" width="${x}" height="${b}" fill="#f6d7a8" stroke="#333"/><rect x="${x0+x}" y="${y0+x}" width="${b}" height="${b}" fill="#b9e3c6" stroke="#333"/>
+      <text x="${x0+x/2}" y="${y0+x/2+5}" font-size="16" text-anchor="middle">x²</text><text x="${x0+x+b/2}" y="${y0+x/2+5}" font-size="14" text-anchor="middle">${s.b}x</text><text x="${x0+x/2}" y="${y0+x+b/2+5}" font-size="14" text-anchor="middle">${s.b}x</text><text x="${x0+x+b/2}" y="${y0+x+b/2+5}" font-size="14" text-anchor="middle">${s.b*s.b}</text>
+      <text x="${x0+x/2}" y="${y0+x+b+22}" font-size="13" text-anchor="middle">x</text><text x="${x0+x+b/2}" y="${y0+x+b+22}" font-size="13" text-anchor="middle">${s.b}</text></svg>
+      <p class="wmsg">邊長 x + ${s.b} 的正方形，面積 = x² + ${s.b}x + ${s.b}x + ${s.b*s.b} = <b>x² + ${2*s.b}x + ${s.b*s.b}</b>。兩塊橘色長方形就是常被漏掉的「2ab」。</p>`;},
+    controls(s){return `<div class="wctl">(x + b)²，b = ${[1,2,3,4].map(v=>`<button class="chip" data-act="b" data-v="${v}" aria-pressed="${s.b===v}">${v}</button>`).join('')}</div>`;},
+    act(s,a,v){s.b=+v;}},
+  example:{q:'展開 (2x − 5)²',steps:['套用 (a − b)² = a² − 2ab + b²，a = 2x，b = 5。','a² = 4x²，2ab = 2 × 2x × 5 = 20x，b² = 25。','答案 4x² − 20x + 25。']},
+  tiers:[
+   r=>{const b=ri(r,1,9)*pick(r,[1,-1]);return{h:`展開：(x ${b>0?'+':'−'} ${Math.abs(b)})² =`,key:quad(1,2*b,b*b),check:quadCheck(1,2*b,b*b),hint:`x² ${b>0?'+':'−'} 2 × ${Math.abs(b)} × x + ${b*b}。`};},
+   r=>{const b=ri(r,1,9),k=pick(r,[1,1,2,3]);return{h:`展開：(${k===1?'':k}x + ${b})(${k===1?'':k}x − ${b}) =`,key:quad(k*k,0,-b*b),check:quadCheck(k*k,0,-b*b),hint:'平方差：a² − b²，中間項會抵消。'};},
+   r=>{const b=ri(r,2,9);const t=pick(r,[0,1,2]);const P=t===0?quad(1,0,-b*b):t===1?quad(1,2*b,b*b):quad(1,-2*b,b*b);const ans=t===0?`(x + ${b})(x − ${b})`:t===1?`(x + ${b})²`:`(x − ${b})²`;
+     const opts=[`(x + ${b})(x − ${b})`,`(x + ${b})²`,`(x − ${b})²`,`(x − ${b*b})(x + 1)`];const m=shuffleMC(r,ans,opts.filter(o=>o!==ans));return{h:`因式分解：${P} =`,mc:m.options,ans:m.ans,key:ans,hint:'看常數項和中間項：只有兩項而且相減是平方差。'};}]
+};
+
+/* ---------- 平方根與根式 ---------- */
+MOD['A-root']={
+  goal:'分清楚「a 的平方根」（有正負兩個）和 √a（正的那個），會化簡根式並合併同類方根。',
+  wrong:{h:'常見的錯：16 的平方根只寫 4；√8 + √18 寫成 √26。',why:'平方後等於 16 的數有 4 和 −4 兩個，√16 只代表正的 4。根號不能直接相加，就像 2 個蘋果 + 3 個香蕉不能變成 5 個水果一樣，要先化成同一種「√2」才能合併。'},
+  concept:['a 的平方根是 ±√a；√a 只表示正的平方根。','化簡：把根號裡的完全平方數拿出來，√18 = √(9 × 2) = 3√2。','同類方根（根號裡一樣）才能相加減：2√2 + 3√2 = 5√2。'],
+  widget:{init:()=>({n:18}),printState:()=>({n:18}),
+    render(s){let k=1;for(let i=2;i*i<=s.n;i++)if(s.n%(i*i)===0)k=i;const rest=s.n/(k*k);
+      return `<div style="font-size:22px">√${s.n} = √(${k*k} × ${rest}) = √${k*k} × √${rest} = <b>${k===1?'':k}${rest===1?'':'√'+rest}${rest===1&&k===1?'1':''}</b></div>
+      <p class="wmsg">${k===1?`${s.n} 裡面沒有大於 1 的完全平方數因數，不能再化簡。`:`在 ${s.n} 裡找最大的完全平方數因數 ${k*k}（= ${k}²），把 ${k} 拿到根號外面。`}</p>`;},
+    controls(s){return `<div class="wctl">${[8,12,18,20,27,48,50,72].map(v=>`<button class="chip" data-act="n" data-v="${v}" aria-pressed="${s.n===v}">√${v}</button>`).join('')}</div>`;},
+    act(s,a,v){s.n=+v;}},
+  example:{q:'√48 − √27 + 2√75 = ?',steps:['化簡：√48 = 4√3，√27 = 3√3，√75 = 5√3。','2√75 = 10√3。','4√3 − 3√3 + 10√3 = 11√3。']},
+  tiers:[
+   r=>{const a=ri(r,2,15);const m=shuffleMC(r,`±${a}`,[`${a}`,`${a*a*2}`,`±${a*2}`]);return{h:`${a*a} 的平方根是？`,mc:m.options,ans:m.ans,key:`±${a}`,hint:'平方後等於它的數，有正負兩個。'};},
+   r=>{let k,p;do{k=ri(r,2,6);p=pick(r,[2,3,5,6,7]);}while(k===p);const n=k*k*p;const m=shuffleMC(r,`${k}√${p}`,[`${p}√${k}`,`${k*k}√${p}`,`√${n}`]);return{h:`把 √${n} 化成最簡根式：`,mc:m.options,ans:m.ans,key:`${k}√${p}`,hint:`${n} = ${k*k} × ${p}。`};},
+   r=>{let p,a,b;do{p=pick(r,[2,3,5]);a=ri(r,2,4);b=ri(r,2,5);}while(a*b===a+b);const A=a*a*p,B=b*b*p;const m=shuffleMC(r,`${a+b}√${p}`,[`√${A+B}`,`${a*b}√${p}`,`${a+b}√${2*p}`]);return{h:`√${A} + √${B} = ？`,mc:m.options,ans:m.ans,key:`${a+b}√${p}`,hint:`先化簡：√${A} = ${a}√${p}，√${B} = ${b}√${p}。`};}]
+};
+
+/* ---------- 畢氏定理與特殊直角三角形 ---------- */
+MOD['G-pyth']={
+  goal:'會用畢氏定理求直角三角形的邊長，判斷三邊能不能構成直角三角形，認識 30°-60°-90° 和 45°-45°-90° 的邊長比。',
+  wrong:{h:'常見的錯：斜邊 10、30° 角的對邊算成 5√3；6、8、12 也當成直角三角形。',why:'30°-60°-90° 的邊長比是 1 : √3 : 2，最短的邊對最小的角（30°），是斜邊的一半。判斷直角三角形要檢查「兩短邊平方和 = 最長邊平方」：36 + 64 = 100 ≠ 144。'},
+  concept:['直角三角形：兩股的平方和 = 斜邊的平方（a² + b² = c²）。','反過來，三邊滿足 a² + b² = c²，就是直角三角形。','30°-60°-90°：1 : √3 : 2；45°-45°-90°：1 : 1 : √2。'],
+  widget:{init:()=>({p:0}),printState:()=>({p:0}),presets:[[3,4,5],[5,12,13],[6,8,10]],
+    render(s){const [a,b,c]=this.presets[s.p];const u=120/b;const A=a*u,B=b*u,x0=40+A,y0=A+20;
+      return `<svg viewBox="0 0 440 ${y0+B+10}" class="wsvg"><rect x="${x0-A}" y="${y0-A}" width="${A}" height="${A}" fill="#f6d7a8" stroke="#333"/><rect x="${x0}" y="${y0}" width="${B}" height="${B}" fill="#cfe1f7" stroke="#333"/>
+      <polygon points="${x0},${y0} ${x0+B},${y0} ${x0},${y0-A}" fill="#fff" stroke="#d23c3c" stroke-width="2.5"/><text x="${x0-A/2}" y="${y0-A/2+5}" font-size="13" text-anchor="middle">${a}²=${a*a}</text><text x="${x0+B/2}" y="${y0+B/2+5}" font-size="13" text-anchor="middle">${b}²=${b*b}</text><text x="${x0+B/2+14}" y="${y0-A/2-4}" font-size="14" fill="#d23c3c">斜邊 ${c}</text></svg>
+      <p class="wmsg">兩股 ${a}、${b}：${a}² + ${b}² = ${a*a} + ${b*b} = ${c*c} = ${c}²，所以斜邊是 <b>${c}</b>。兩個正方形的面積加起來，會等於斜邊上的正方形。</p>`;},
+    controls(s){return `<div class="wctl">${this.presets.map((p,i)=>`<button class="chip" data-act="p" data-v="${i}" aria-pressed="${s.p===i}">${p.join('、')}</button>`).join('')}</div>`;},
+    act(s,a,v){s.p=+v;}},
+  example:{q:'直角三角形斜邊 13，一股 5，另一股是多少？',steps:['設另一股為 x：5² + x² = 13²。','25 + x² = 169，x² = 144。','x = 12（邊長取正）。']},
+  tiers:[
+   r=>{const t=pick(r,[[3,4,5],[5,12,13],[8,15,17],[7,24,25],[6,8,10],[9,12,15]]);return{h:`直角三角形兩股長 ${t[0]}、${t[1]}，斜邊長是多少？`,key:String(t[2]),check:numCheck(R(t[2])),hint:`${t[0]}² + ${t[1]}² = 斜邊²。`};},
+   r=>{const t=pick(r,[[3,4,5],[5,12,13],[8,15,17],[7,24,25],[9,40,41],[12,16,20]]);return{h:`直角三角形斜邊長 ${t[2]}，一股長 ${t[0]}，另一股長是多少？`,key:String(t[1]),check:numCheck(R(t[1])),hint:`另一股² = ${t[2]}² − ${t[0]}²。`};},
+   r=>{const h=pick(r,[4,6,8,10,12]);const t=r()<.5;if(t){const m=shuffleMC(r,String(h/2),[`${h/2}√3`,`${h}√3`,String(h*2)]);return{h:`直角三角形中有一個角是 30°，斜邊長 ${h}，30° 角所對的邊長是？`,mc:m.options,ans:m.ans,key:String(h/2),hint:'30°-60°-90° 的邊長比 1 : √3 : 2，30° 對最短邊。'};}
+     const k=h/2;const m=shuffleMC(r,`${k}√2`,[String(k*2),`${k}√3`,String(k)]);return{h:`等腰直角三角形的兩股都是 ${k}，斜邊長是？`,mc:m.options,ans:m.ans,key:`${k}√2`,hint:'45°-45°-90° 的邊長比 1 : 1 : √2。'};}]
+};
+
+/* ---------- 一元二次方程式（十字交乘） ---------- */
+MOD['A-quad']={
+  goal:'會用十字交乘把二次式分解，解出一元二次方程式的兩個根，不在兩邊同除以 x。',
+  wrong:{h:'常見的錯：x² − 5x − 6 = 0 的解寫成 −6 或 1（正負號反了）；x² = 4x 兩邊除以 x 只得到 x = 4；2x² + x − 3 忘記處理首項係數。',why:'(x − 6)(x + 1) = 0 代表 x − 6 = 0 或 x + 1 = 0，所以 x = 6 或 −1，根的正負號和因式相反。兩邊同除以 x 時，如果 x = 0 就不能除，會漏掉 x = 0 這個根。'},
+  concept:['先移項讓一邊是 0。','十字交乘：x² + bx + c，找兩個數相乘 = c、相加 = b。','分解成 (x − p)(x − q) = 0，解是 x = p 或 x = q。','首項不是 1 時，十字左邊也要拆（例如 2x² 拆成 2x 和 x）。'],
+  widget:{init:()=>({k:0,pick:-1}),printState:()=>({k:0,pick:0}),sets:[{b:-5,c:-6},{b:5,c:6},{b:-1,c:-12}],
+    render(s){const {b,c}=this.sets[s.k];const pairs=[];for(let p=-Math.abs(c);p<=Math.abs(c);p++)if(p&&c%p===0&&p<=c/p)pairs.push([p,c/p]);
+      const sel=pairs[s.pick];const ok=sel&&sel[0]+sel[1]===b;
+      return `<div style="font-size:20px">x² ${b<0?'−':'+'} ${Math.abs(b)===1?'':Math.abs(b)}x ${c<0?'−':'+'} ${Math.abs(c)} = 0</div>
+      <p class="mute">找兩個數：相乘 = ${neg(c)}，相加 = ${neg(b)}。點一組試試看：</p><div class="wctl">${pairs.map((p,i)=>`<button class="chip" data-act="p" data-v="${i}" aria-pressed="${s.pick===i}">${neg(p[0])} 和 ${neg(p[1])}</button>`).join('')}</div>
+      <p class="wmsg">${!sel?'還沒選。':ok?`✓ ${neg(sel[0])} × ${neg(sel[1])} = ${neg(c)}，${neg(sel[0])} + ${neg(sel[1])} = ${neg(b)}。分解成 (x ${sel[0]<0?'−':'+'} ${Math.abs(sel[0])})(x ${sel[1]<0?'−':'+'} ${Math.abs(sel[1])}) = 0，解是 <b>x = ${neg(-sel[0])} 或 x = ${neg(-sel[1])}</b>（正負號和因式相反）。`:`✗ 相乘是 ${neg(c)}，但相加是 ${neg(sel[0]+sel[1])}，不是 ${neg(b)}。`}</p>`;},
+    controls(s){return `<div class="wctl">換一題：${this.sets.map((q,i)=>`<button class="chip" data-act="k" data-v="${i}" aria-pressed="${s.k===i}">第 ${i+1} 題</button>`).join('')}</div>`;},
+    act(s,a,v){if(a==='k'){s.k=+v;s.pick=-1;}else s.pick=+v;}},
+  example:{q:'解 2x² + x − 3 = 0',steps:['十字交乘：2x² 拆成 2x 和 x，−3 拆成 3 和 −1。','交叉相乘：2x × (−1) + x × 3 = x ✓，分解成 (2x + 3)(x − 1) = 0。','2x + 3 = 0 → x = −3/2；x − 1 = 0 → x = 1。']},
+  tiers:[
+   r=>{let p,q;do{p=ri(r,-9,9);q=ri(r,-9,9);}while(!p||!q||p===q);const b=-(p+q),c=p*q;return{h:`解方程式：${quad(1,b,c)} = 0（兩個解用逗號隔開）`,key:`${neg(p)}, ${neg(q)}`,check:listCheck([R(p),R(q)]),hint:`找兩個數相乘 ${neg(c)}、相加 ${neg(b)}；解的正負號和因式相反。`};},
+   r=>{const k=ri(r,-9,9)||3;const a=pick(r,[1,2,3]);return{h:`解方程式：${a===1?'':a}x² = ${neg(a*k)}x（兩個解用逗號隔開）`,key:`0, ${neg(k)}`,check:listCheck([R(0),R(k)]),hint:`不要兩邊除以 x！移項後提出 x：x(${a===1?'':a}x ${a*k<0?'+':'−'} ${Math.abs(a*k)}) = 0。`};},
+   r=>{let a,p,q;do{a=pick(r,[2,3]);p=ri(r,-5,5);q=ri(r,-4,4);}while(!p||!q||gcd(Math.abs(p),a)!==1);
+     /* (a x − p)(x − q) = a x² − (aq + p)x + pq */const A=a,B=-(a*q+p),C=p*q;return{h:`解方程式：${quad(A,B,C)} = 0（兩個解用逗號隔開，分數寫成 3/2）`,key:`${ftxt(R(p,a))}, ${neg(q)}`,check:listCheck([R(p,a),R(q)]),hint:`${A}x² 拆成 ${A}x 和 x 做十字交乘。`};}]
+};
+
+/* ---------- 等差數列與級數 ---------- */
+MOD['N-seq']={
+  goal:'會用 aₙ = a₁ + (n − 1)d 求等差數列的某一項，用「首項加末項，乘項數除以 2」求和。',
+  wrong:{h:'常見的錯：2, 5, 8, … 的第 10 項算成 2 + 3 × 10 = 32；1 + 3 + … + 19 算成 200（忘記除以 2）。',why:'從第 1 項到第 10 項只「跳」了 9 次，所以是加 9 個公差。求和時把數列倒過來配對，每一對都是首項 + 末項，但這樣算了兩次，要除以 2。'},
+  concept:['公差 d = 後一項 − 前一項。','第 n 項：aₙ = a₁ + (n − 1)d。','和 = (首項 + 末項) × 項數 ÷ 2。','項數 = (末項 − 首項) ÷ d + 1。'],
+  widget:{init:()=>({a:2,d:3,n:6}),printState:()=>({a:2,d:3,n:6}),
+    render(s){const t=Array.from({length:s.n},(_,i)=>s.a+i*s.d);const W=Math.min(52,380/s.n);
+      return `<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:flex-end">${t.map((v,i)=>`<div style="text-align:center"><div style="width:${W}px;height:${12+v*3}px;max-height:150px;background:${i===s.n-1?'#d23c3c':'#a9c9ef'};border-radius:4px 4px 0 0"></div><div style="font-size:13px">${v}</div><div class="mute" style="font-size:11px">a${i+1}</div></div>`).join('')}</div>
+      <p class="wmsg">第 ${s.n} 項 = ${s.a} + (${s.n} − 1) × ${s.d} = <b>${t[s.n-1]}</b>（從 a₁ 到 a${s.n} 跳了 ${s.n-1} 次）。前 ${s.n} 項的和 = (${s.a} + ${t[s.n-1]}) × ${s.n} ÷ 2 = <b>${(s.a+t[s.n-1])*s.n/2}</b>。</p>`;},
+    controls(s){return `<div class="wctl">首項：${[1,2,5].map(v=>`<button class="chip" data-act="a" data-v="${v}" aria-pressed="${s.a===v}">${v}</button>`).join('')}　公差：${[2,3,4].map(v=>`<button class="chip" data-act="d" data-v="${v}" aria-pressed="${s.d===v}">${v}</button>`).join('')}　項數：${[4,6,8,10].map(v=>`<button class="chip" data-act="n" data-v="${v}" aria-pressed="${s.n===v}">${v}</button>`).join('')}</div>`;},
+    act(s,a,v){s[a]=+v;}},
+  example:{q:'3 + 7 + 11 + … + 43 = ?',steps:['公差 4，項數 = (43 − 3) ÷ 4 + 1 = 11。','和 = (3 + 43) × 11 ÷ 2。','= 46 × 11 ÷ 2 = 253。']},
+  tiers:[
+   r=>{const a=ri(r,-5,10),d=pick(r,[-3,-2,2,3,4,5]),n=ri(r,6,20);return{h:`等差數列 ${[0,1,2,3].map(i=>neg(a+i*d)).join(', ')}, … 的第 ${n} 項是？`,key:neg(a+(n-1)*d),check:numCheck(R(a+(n-1)*d)),hint:`a${n} = ${neg(a)} + (${n} − 1) × ${neg(d)}。`};},
+   r=>{const a=ri(r,1,10),d=pick(r,[2,3,4,5]),n=ri(r,8,25);return{h:`等差數列的首項是 ${a}，公差是 ${d}，${a+(n-1)*d} 是第幾項？`,key:String(n),check:numCheck(R(n)),hint:`(${a+(n-1)*d} − ${a}) ÷ ${d} + 1。`};},
+   r=>{const a=ri(r,1,9),d=pick(r,[1,2,3,4]),n=ri(r,6,15);const L=a+(n-1)*d;return{h:`${a} + ${a+d} + ${a+2*d} + … + ${L} = ？`,key:String((a+L)*n/2),check:numCheck(R((a+L)*n,2)),hint:`項數 = (${L} − ${a}) ÷ ${d} + 1 = ${n}；和 = (首項 + 末項) × 項數 ÷ 2。`};}]
+};
+
+/* ---------- 三角形與四邊形的性質 ---------- */
+MOD['G-tri']={
+  goal:'會用三角形內角和 180°、外角定理求角度，分辨平行四邊形、矩形、菱形的性質。',
+  wrong:{h:'常見的錯：外角 110°、一個內角 40°，另一個不相鄰的內角算成 180° − 110° − 40° = 30°；以為所有平行四邊形的對角線都等長。',why:'外角 = 兩個不相鄰內角的和，所以另一個角是 110° − 40° = 70°。對角線等長是矩形才有的性質，一般平行四邊形只有「對角線互相平分」。'},
+  concept:['三角形內角和 = 180°。','外角 = 和它不相鄰的兩個內角相加。','平行四邊形：對邊相等、對角相等、對角線互相平分。','矩形再加上對角線等長；菱形再加上四邊等長、對角線互相垂直。'],
+  widget:{init:()=>({A:50,B:60}),printState:()=>({A:40,B:70}),
+    render(s){const C=180-s.A-s.B;const toR=d=>d*Math.PI/180;const bx=60,by=170,cx=300,cy=170;const L=cx-bx;
+      const ta=Math.tan(toR(s.B)),tb=Math.tan(toR(C));const L2=Math.min(L,150*(ta+tb)/(ta*tb));const cx2=bx+L2;const ax=bx+L2*tb/(ta+tb),ay=by-(ax-bx)*ta;
+      return `<svg viewBox="0 0 440 190" class="wsvg"><polygon points="${bx},${by} ${cx2},${cy} ${ax},${ay}" fill="#cfe1f7" stroke="#333"/><line x1="${cx2}" y1="${cy}" x2="420" y2="${cy}" stroke="#333" stroke-dasharray="5 4"/>
+      <text x="${ax}" y="${ay+22}" font-size="13" text-anchor="middle">${s.A}°</text><text x="${bx+22}" y="${by-6}" font-size="13">${s.B}°</text><text x="${cx2-30}" y="${cy-6}" font-size="13">${C}°</text><text x="${cx2+30}" y="${cy-8}" font-size="14" fill="#d23c3c" font-weight="700">${180-C}°</text></svg>
+      <p class="wmsg">紅色外角 = 180° − ${C}° = <b>${180-C}°</b>，剛好等於另外兩個內角相加：${s.A}° + ${s.B}° = ${s.A+s.B}°。</p>`;},
+    controls(s){return `<div class="wctl">頂角：${[30,40,50,70].map(v=>`<button class="chip" data-act="A" data-v="${v}" aria-pressed="${s.A===v}">${v}°</button>`).join('')}　左下角：${[50,60,70].map(v=>`<button class="chip" data-act="B" data-v="${v}" aria-pressed="${s.B===v}">${v}°</button>`).join('')}</div>`;},
+    act(s,a,v){s[a]=+v;}},
+  example:{q:'△ABC 中，∠A = 2∠B，∠C 的外角是 120°，求 ∠B。',steps:['∠C 的外角 = ∠A + ∠B = 120°。','2∠B + ∠B = 120°，3∠B = 120°。','∠B = 40°。']},
+  tiers:[
+   r=>{const a=ri(r,30,90),b=ri(r,20,150-a);return{h:`三角形的兩個內角是 ${a}° 和 ${b}°，第三個內角是幾度？`,key:String(180-a-b),check:numCheck(R(180-a-b)),hint:'內角和 180°。'};},
+   r=>{const a=ri(r,25,80),b=ri(r,25,80);return{h:`三角形的一個外角是 ${a+b}°，和它不相鄰的一個內角是 ${a}°，另一個不相鄰的內角是幾度？`,key:String(b),check:numCheck(R(b)),hint:'外角 = 兩個不相鄰內角的和。'};},
+   r=>{const sets=[['所有平行四邊形','對角線互相平分',['對角線等長','對角線互相垂直','四邊等長']],['所有矩形','對角線等長',['對角線互相垂直','四邊等長','對角線平分內角']],['所有菱形','對角線互相垂直',['對角線等長','四個角都是直角','鄰邊互相垂直']]];
+     const [n,c,w]=pick(r,sets);const m=shuffleMC(r,c,w);return{h:`下列哪一個性質是「${n}」一定成立的？`,mc:m.options,ans:m.ans,key:c,hint:'矩形是角特別（直角），菱形是邊特別（四邊等長）。'};}]
+};
+
+/* ---------- 圓的性質 ---------- */
+MOD['G-circle']={
+  goal:'知道圓周角是同弧圓心角的一半、半圓的圓周角是 90°，切線和半徑垂直。',
+  wrong:{h:'常見的錯：同弧的圓心角 100°，圓周角也寫 100°；切線長用 13 − 5 = 8 算。',why:'圓周角的頂點在圓上，比圓心離弧更遠，張開的角度只有圓心角的一半。切線和過切點的半徑垂直，所以半徑、切線、圓心到點的連線會形成直角三角形，要用畢氏定理。'},
+  concept:['圓周角 = 同弧所對圓心角的一半。','直徑（半圓）所對的圓周角 = 90°。','切線 ⟂ 過切點的半徑；切線長 = √(OP² − r²)。'],
+  widget:{init:()=>({c:100}),printState:()=>({c:100}),
+    render(s){const O=[150,110],R0=80,toR=d=>d*Math.PI/180;const a1=toR(90+s.c/2),a2=toR(90-s.c/2);const A=[O[0]+R0*Math.cos(a1),O[1]+R0*Math.sin(a1)],B=[O[0]+R0*Math.cos(a2),O[1]+R0*Math.sin(a2)],P=[O[0],O[1]-R0];
+      return `<svg viewBox="0 0 440 210" class="wsvg"><circle cx="${O[0]}" cy="${O[1]}" r="${R0}" fill="none" stroke="#333"/><polyline points="${A} ${O} ${B}" fill="none" stroke="#4f8fd8" stroke-width="2.5"/><polyline points="${A} ${P} ${B}" fill="none" stroke="#d23c3c" stroke-width="2.5"/><circle cx="${O[0]}" cy="${O[1]}" r="3"/>
+      <text x="${O[0]+8}" y="${O[1]+4}" font-size="13" fill="#4f8fd8">${s.c}°</text><text x="${P[0]+6}" y="${P[1]+22}" font-size="13" fill="#d23c3c">${s.c/2}°</text><text x="260" y="60" font-size="14" fill="#4f8fd8">藍：圓心角 ${s.c}°</text><text x="260" y="84" font-size="14" fill="#d23c3c">紅：圓周角 ${s.c/2}°</text></svg>
+      <p class="wmsg">同一段弧（下方）：圓心角 ${s.c}°，圓周角只有一半 = <b>${s.c/2}°</b>。${s.c===180?'圓心角 180° 就是直徑，圓周角剛好 90°。':''}</p>`;},
+    controls(s){return `<div class="wctl">圓心角：${[60,100,140,180].map(v=>`<button class="chip" data-act="c" data-v="${v}" aria-pressed="${s.c===v}">${v}°</button>`).join('')}</div>`;},
+    act(s,a,v){s.c=+v;}},
+  example:{q:'圓 O 半徑 5，圓外一點 P 到 O 的距離 13，求切線長 PA。',steps:['切線 PA ⟂ 半徑 OA，所以 △OAP 是直角三角形，斜邊是 OP。','PA² = 13² − 5² = 169 − 25 = 144。','PA = 12。']},
+  tiers:[
+   r=>{const c=ri(r,3,17)*10;return{h:`圓上一段弧所對的圓心角是 ${c}°，同弧所對的圓周角是幾度？`,key:String(c/2),check:numCheck(R(c,2)),hint:'圓周角是圓心角的一半。'};},
+   r=>{if(r()<.5){const i=ri(r,15,80);return{h:`同弧所對的圓周角是 ${i}°，圓心角是幾度？`,key:String(2*i),check:numCheck(R(2*i)),hint:'圓心角是圓周角的 2 倍。'};}
+     const a=ri(r,20,70);return{h:`AB 是圓的直徑，C 是圓上另一點，∠CAB = ${a}°，∠CBA 是幾度？`,key:String(90-a),check:numCheck(R(90-a)),hint:'直徑所對的圓周角 ∠ACB = 90°。'};},
+   r=>{const t=pick(r,[[5,12,13],[3,4,5],[8,15,17],[6,8,10],[7,24,25]]);return{h:`圓 O 的半徑是 ${t[0]}，圓外一點 P 到圓心的距離是 ${t[2]}，從 P 畫圓的切線，切線長是？`,key:String(t[1]),check:numCheck(R(t[1])),hint:`切線 ⟂ 半徑，切線長² = ${t[2]}² − ${t[0]}²。`};}]
+};
+
+/* ---------- 三角形的心 ---------- */
+MOD['G-center']={
+  goal:'分清楚外心、內心、重心的作法與性質，會用重心 2 : 1、直角三角形外心在斜邊中點來計算。',
+  wrong:{h:'常見的錯：把「到三邊等距」當成外心；中線長 9，重心到頂點算成 3 或 4.5。',why:'外心是三邊中垂線的交點，到三個「頂點」等距（外接圓圓心）；內心是角平分線的交點，到三個「邊」等距（內切圓圓心）。重心把中線分成 2 : 1，靠頂點那段占 2 份。'},
+  concept:['外心：中垂線交點，到三頂點等距；直角三角形的外心在斜邊中點。','內心：角平分線交點，到三邊等距。','重心：中線交點，把每條中線分成 2 : 1（頂點到重心是 2 份）。'],
+  widget:{init:()=>({m:'g'}),printState:()=>({m:'g'}),
+    render(s){const A=[80,170],B=[360,170],C=[150,30];const mid=(p,q)=>[(p[0]+q[0])/2,(p[1]+q[1])/2];let g=`<polygon points="${A} ${B} ${C}" fill="#f4f6fa" stroke="#333" stroke-width="2"/>`;let msg='';
+      if(s.m==='g'){const G=[(A[0]+B[0]+C[0])/3,(A[1]+B[1]+C[1])/3];[[A,mid(B,C)],[B,mid(A,C)],[C,mid(A,B)]].forEach(([p,q])=>g+=`<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke="#4f8fd8" stroke-width="1.5"/>`);g+=`<circle cx="${G[0]}" cy="${G[1]}" r="5" fill="#d23c3c"/>`;msg='重心：三條中線（頂點連到對邊中點）的交點，把每條中線分成 2 : 1。';}
+      if(s.m==='o'){const d=2*(A[0]*(B[1]-C[1])+B[0]*(C[1]-A[1])+C[0]*(A[1]-B[1]));const n=p=>p[0]*p[0]+p[1]*p[1];const O=[(n(A)*(B[1]-C[1])+n(B)*(C[1]-A[1])+n(C)*(A[1]-B[1]))/d,(n(A)*(C[0]-B[0])+n(B)*(A[0]-C[0])+n(C)*(B[0]-A[0]))/d];const R0=Math.hypot(A[0]-O[0],A[1]-O[1]);
+        g+=`<circle cx="${O[0]}" cy="${O[1]}" r="${R0}" fill="none" stroke="#4f8fd8" stroke-dasharray="4 3"/>${[A,B,C].map(p=>`<line x1="${O[0]}" y1="${O[1]}" x2="${p[0]}" y2="${p[1]}" stroke="#4f8fd8"/>`).join('')}<circle cx="${O[0]}" cy="${O[1]}" r="5" fill="#d23c3c"/>`;msg='外心：三邊中垂線的交點，到三個頂點的距離都一樣（三條藍線等長），是外接圓的圓心。';}
+      if(s.m==='i'){const a=Math.hypot(B[0]-C[0],B[1]-C[1]),b=Math.hypot(A[0]-C[0],A[1]-C[1]),c=Math.hypot(A[0]-B[0],A[1]-B[1]);const I=[(a*A[0]+b*B[0]+c*C[0])/(a+b+c),(a*A[1]+b*B[1]+c*C[1])/(a+b+c)];const rr=Math.abs((B[0]-A[0])*(A[1]-I[1])-(A[0]-I[0])*(B[1]-A[1]))/c;
+        g+=`<circle cx="${I[0]}" cy="${I[1]}" r="${rr}" fill="none" stroke="#4f8fd8" stroke-dasharray="4 3"/><circle cx="${I[0]}" cy="${I[1]}" r="5" fill="#d23c3c"/>`;msg='內心：三條角平分線的交點，到三個邊的距離都一樣，是內切圓的圓心。';}
+      return `<svg viewBox="0 0 440 ${s.m==='o'?240:190}" class="wsvg" style="overflow:hidden">${g}</svg><p class="wmsg">${msg}</p>`;},
+    controls(s){return `<div class="wctl">${[['g','重心'],['o','外心'],['i','內心']].map(([k,n])=>`<button class="chip" data-act="m" data-v="${k}" aria-pressed="${s.m===k}">${n}</button>`).join('')}</div>`;},
+    act(s,a,v){s.m=v;}},
+  example:{q:'直角三角形兩股 6、8，外接圓半徑是多少？',steps:['斜邊 = √(6² + 8²) = 10。','直角三角形的外心在斜邊中點。','外接圓半徑 = 斜邊的一半 = 5。']},
+  tiers:[
+   r=>{const sets=[['外心','到三個頂點的距離相等',['到三邊的距離相等','是三條中線的交點','是三條高的交點']],['內心','到三邊的距離相等',['到三個頂點的距離相等','是三條中線的交點','一定在斜邊中點']],['重心','是三條中線的交點',['到三邊的距離相等','到三個頂點的距離相等','是三條中垂線的交點']]];
+     const [n,c,w]=pick(r,sets);const m=shuffleMC(r,c,w);return{h:`三角形的${n}有什麼性質？`,mc:m.options,ans:m.ans,key:c,hint:'外心↔頂點、內心↔邊、重心↔中線。'};},
+   r=>{const k=ri(r,2,8);const toV=r()<.5;return toV?{h:`三角形的一條中線長 ${3*k}，重心到這條中線所在頂點的距離是？`,key:String(2*k),check:numCheck(R(2*k)),hint:'頂點到重心占中線的 2/3。'}:{h:`三角形的一條中線長 ${3*k}，重心到這條中線所在邊的中點的距離是？`,key:String(k),check:numCheck(R(k)),hint:'重心到中點占中線的 1/3。'};},
+   r=>{const t=pick(r,[[6,8,10],[5,12,13],[8,15,17],[9,12,15],[12,16,20]]);return{h:`直角三角形的兩股長 ${t[0]}、${t[1]}，外接圓的半徑是多少？`,key:String(t[2]/2),check:numCheck(R(t[2],2)),hint:'外心在斜邊中點，半徑 = 斜邊 ÷ 2。'};}]
 };
 
 const TIERS=['基礎','進階','挑戰'];

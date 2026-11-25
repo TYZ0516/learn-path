@@ -36,3 +36,5 @@ input,textarea,select{font:inherit;font-size:16px;color:var(--ink);background:va
 .ladder .lp{background:color-mix(in srgb,var(--ok) 22%,transparent)}.ladder .lf{background:color-mix(in srgb,var(--bad) 18%,transparent)}
 .ladder .start{outline:3px solid var(--bad);outline-offset:-3px;font-weight:700}
 @media(max-width:600px){.ladder{grid-template-columns:repeat(5,minmax(0,1fr))}.graphwrap{grid-template-columns:1fr}}
+
+.ptab{border-collapse:collapse;font-size:16px;background:#fff;color:#111}.ptab th,.ptab td{border:1px solid #c9d0db;padding:6px 12px;text-align:center}.ptab th{background:#eef3fb}
