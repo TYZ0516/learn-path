@@ -86,7 +86,7 @@ const fh=x=>x.d===1?(x.n<0?'−'+(-x.n):String(x.n)):(x.n<0?'−':'')+F(Math.abs
 const mixh=x=>{if(x.d===1||Math.abs(x.n)<x.d)return fh(x);const w=Math.trunc(x.n/x.d),r=Math.abs(x.n%x.d);return (x.n<0?'−':'')+Math.abs(w)+F(r,x.d);};
 const neg=n=>n<0?'−'+(-n):String(n);
 const sgn=n=>n<0?' − '+(-n):' + '+n;
-function norm(s){return String(s||'').trim().replace(/[／]/g,'/').replace(/[－−–]/g,'-').replace(/[：]/g,':').replace(/[，、]/g,',').replace(/（/g,'(').replace(/）/g,')').replace(/\s+/g,' ');}
+function norm(s){return String(s||'').trim().replace(/[０-９ａ-ｚＡ-Ｚ．＋]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/　/g,' ').replace(/[／]/g,'/').replace(/[－−–]/g,'-').replace(/[：]/g,':').replace(/[，、]/g,',').replace(/（/g,'(').replace(/）/g,')').replace(/\s+/g,' ');}
 function parseNum(s){
   s=norm(s).replace(/^[a-z]\s*=\s*/i,'').replace(/(元|人|顆|公里|公分|平方公分|度|°)$/,'').trim();let m;
   if(m=s.match(/^(-?)(\d+)\s*(?:又|\s)\s*(\d+)\/(\d+)$/)){const w=+m[2],n=+m[3],d=+m[4];if(!d)return null;const v=R(w*d+n,d);return{v:m[1]?R(-v.n,v.d):v,raw:[n,d]};}
