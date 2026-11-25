@@ -3,10 +3,12 @@
    apiKey 保持「請貼上」時，系統會以示範模式執行（資料只存在這台裝置的瀏覽器）。 */
 window.LEARN_CONFIG = {
   firebase: {
-    apiKey: "請貼上",
-    authDomain: "請貼上",
-    databaseURL: "請貼上",
-    projectId: "請貼上",
-    appId: "請貼上"
+     apiKey: "AIzaSyCTwF6bI5vJO-UYP5Jrw-yW4P5LMCzgq3U",
+  authDomain: "learn-path-55dac.firebaseapp.com",
+  databaseURL: "https://learn-path-55dac-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "learn-path-55dac",
+  storageBucket: "learn-path-55dac.firebasestorage.app",
+  messagingSenderId: "415977792435",
+  appId: "1:415977792435:web:0d4996755e2d92fea2a1c6"
   }
 };
