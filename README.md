@@ -42,6 +42,7 @@
 
 7. 在 GitHub 新增一個 repo（例如 `learn-path`），上傳這 8 個檔案，到 Settings → Pages 開啟 GitHub Pages（Branch 選 main）。
 8. 學生網址：`https://tyz0516.github.io/learn-path/`；老師後台：`https://tyz0516.github.io/learn-path/admin.html`（用規則裡的那個 Google 帳號登入）。
+9. 測試用網址：在網址後面加 `?demo`（例如 `https://tyz0516.github.io/learn-path/?demo`、`https://tyz0516.github.io/learn-path/admin.html?demo`），會用示範模式打開，可以點 5 位模擬學生直接進入。資料只存在這台裝置的瀏覽器，不會寫入 Firebase，也不會影響真正學生的資料。
 
 ### 免費方案的額度（每個專案各自計算）
 Realtime Database 免費方案大約是：同時連線 100 個、儲存 1 GB、每月下載 10 GB。原民班一個班使用綽綽有餘：一筆作答紀錄大約 150 位元組，就算全班每人寫上千題，也只用到幾 MB。

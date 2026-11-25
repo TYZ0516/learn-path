@@ -55,7 +55,8 @@ const Fire={
 };
 
 const cfg=(window.LEARN_CONFIG||{}).firebase||{};
-const useFire=cfg.apiKey&&cfg.apiKey!=='請貼上';
+const forceDemo=/[?&]demo\b/.test(location.search); // 網址加 ?demo：強制示範模式，可看到模擬學生，不會寫入 Firebase
+const useFire=!forceDemo&&cfg.apiKey&&cfg.apiKey!=='請貼上';
 window.Store=useFire?Fire:Demo;
 window.StoreReady=(async()=>{try{await window.Store.init(cfg);}catch(e){console.error(e);window.Store=Demo;Demo.fallback=e.message;}return window.Store;})();
 })();

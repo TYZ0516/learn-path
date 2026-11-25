@@ -20,7 +20,7 @@
 .mtabs button:disabled{opacity:.4;cursor:default}
 .oops{border-left:4px solid var(--bad);background:color-mix(in srgb,var(--bad) 7%,transparent);padding:10px 14px;border-radius:0 8px 8px 0}
 .qbox{font-size:22px;padding:14px 0;line-height:1.7}
-.ans{display:flex;gap:8px;flex-wrap:wrap}.ans input{font-size:20px;width:200px}
+.ans{display:flex;gap:8px}.ans input{font-size:20px;flex:0 1 260px;min-width:0}.ans .btn{flex:none}.ahint{margin:6px 0 0;font-size:15px;color:var(--mute)}.ahint b{white-space:nowrap;font-family:ui-monospace,Consolas,monospace;color:var(--ink);background:var(--soft);padding:0 5px;border-radius:4px}
 .mc{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:8px}
 .mc button{font:inherit;font-size:17px;text-align:left;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;min-height:48px}
 .mc button.sel{border-color:var(--acc);border-width:2px}
@@ -133,7 +133,7 @@ function drawExample(){const E=L.MOD[cur.m].example;let k=1;
 function newSet(t){const base=(now()%100000)*7;return{t,qs:[0,1,2,3].map(i=>L.makeQ(cur.m,t,base+i*31+t)),i:0,res:[]};}
 function drawQ(box,q,onDone){
   box.innerHTML=`<div class="qbox">${q.h}</div>${q.mc?`<div class="mc">${q.mc.map((o,i)=>`<button data-i="${i}">(${'ABCD'[i]}) ${o}</button>`).join('')}</div>`
-    :`<div class="ans"><input id="ai" autocomplete="off" aria-label="你的答案" placeholder="寫答案，分數寫成 3/4"><button class="btn p" id="sb">送出</button></div>`}<div id="fb"></div>`;
+    :`<div class="ans"><input id="ai" autocomplete="off" aria-label="你的答案" aria-describedby="ahint" placeholder="寫答案"><button class="btn p" id="sb">送出</button></div><p class="ahint" id="ahint">分數寫成 <b>3/4</b>（分子/分母），帶分數寫成 <b>1 3/4</b>，負數寫成 <b>-3/4</b></p>`}<div id="fb"></div>`;
   let doneOnce=false;
   const finish=(val)=>{if(doneOnce)return;const r=q.check(val);if(!r.ok&&r.note&&!q.mc&&!r.hasOwnProperty('x')&&/看不懂|格式/.test(r.note)){box.querySelector('#fb').innerHTML=`<div class="fb no">${esc(r.note)}</div>`;return;}
     doneOnce=true;box.querySelectorAll('button,input').forEach(x=>x.disabled=true);
