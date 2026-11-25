@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>我的數學學習路線</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="style.css">
+<style>
+.hello{font-size:15px;color:var(--mute)}
+.start{font-size:34px;font-weight:700;line-height:1.15;margin:2px 0}
+.path{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.path li{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.path .n{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;background:var(--soft)}
+.path li.done .n{background:var(--ok);color:#fff}.path li.now{border-color:var(--acc);border-width:2px}.path li.now .n{background:var(--acc);color:#fff}
+.path li.off{opacity:.55}
+.mtabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-top:10px}
+.mtabs button{border:0;background:none;font:inherit;font-weight:500;color:var(--mute);padding:10px 12px;border-bottom:3px solid transparent;cursor:pointer;min-height:44px}
+.mtabs button[aria-selected=true]{color:var(--ink);border-color:var(--acc)}
+.mtabs button:disabled{opacity:.4;cursor:default}
+.oops{border-left:4px solid var(--bad);background:color-mix(in srgb,var(--bad) 7%,transparent);padding:10px 14px;border-radius:0 8px 8px 0}
+.qbox{font-size:22px;padding:14px 0;line-height:1.7}
+.ans{display:flex;gap:8px;flex-wrap:wrap}.ans input{font-size:20px;width:200px}
+.mc{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:8px}
+.mc button{font:inherit;font-size:17px;text-align:left;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;min-height:48px}
+.mc button.sel{border-color:var(--acc);border-width:2px}
+.fb{margin-top:12px;padding:12px 14px;border-radius:10px}
+.fb.ok{background:color-mix(in srgb,var(--ok) 15%,transparent)}.fb.no{background:color-mix(in srgb,var(--bad) 12%,transparent)}
+.dots{display:flex;gap:6px;margin:6px 0}.dots i{width:14px;height:14px;border-radius:50%;background:var(--line)}
+.dots i.ok{background:var(--ok)}.dots i.no{background:var(--bad)}.dots i.now{outline:2px solid var(--acc);outline-offset:1px}
+.tiers{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 2px}
+.stepl{font-size:18px;padding:6px 0}
+.big-ok{font-size:28px;font-weight:700;color:var(--ok)}
+.demo{background:color-mix(in srgb,var(--warn) 16%,transparent);border-radius:8px;padding:8px 12px;font-size:14px}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><h1>我的數學學習路線</h1><span class="mute" id="who"></span><span style="flex:1"></span><button class="btn hidden" id="out" hidden>登出</button></div></header>
+<main class="wrap" id="app"><p class="mute">載入中…</p></main>
+<script src="config.js"></script>
+<script src="modules.js"></script>
+<script src="mock.js"></script>
+<script src="store.js"></script>
+<script>
+{
+const L=window.Learn,$=s=>document.querySelector(s),app=$('#app');
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let S=null,me=null,prog={},cur=null,tick=0;
+const now=()=>Date.now();
+const preFor=m=>Object.keys(L.PRE).find(k=>L.PRE[k].includes(m));
+
+/* ---------- 登入 ---------- */
+async function showLogin(msg=''){
+  me=null;$('#who').textContent='';$('#out').hidden=true;
+  let demoBtns='';
+  if(S.mode==='demo'){let st=await S.listStudents();
+    if(!Object.keys(st).length){await S.putStudents(window.LEARN_MOCK.students.map(L.record).filter(Boolean));st=await S.listStudents();}
+    demoBtns=`<div class="demo" style="margin-top:14px">示範模式：資料只存在這台裝置。點一位模擬學生直接進入。${S.fallback?'（Firebase 連不上：'+esc(S.fallback)+'）':''}</div>
+    <div class="row" style="margin-top:8px">${Object.values(st).sort((a,b)=>a.seat-b.seat).map(x=>`<button class="btn" data-demo="${esc(x.seat)}">${esc(x.seat)} 號 ${esc(x.name)}</button>`).join('')}</div>`;}
+  app.innerHTML=`<div class="card" style="max-width:460px;margin:30px auto 0"><h2>登入</h2><p class="mute">輸入座號和姓名，就能看到你自己的學習路線。</p>
+   <div class="row"><label>座號 <input id="seat" inputmode="numeric" style="width:90px"></label><label>姓名 <input id="name" style="width:150px"></label></div>
+   <div class="row" style="margin-top:12px"><button class="btn p" id="go">進入</button><span class="mute" id="lm" role="status">${esc(msg)}</span></div>${demoBtns}</div>`;
+  $('#go').onclick=()=>login($('#seat').value,$('#name').value);
+  $('#name').onkeydown=e=>{if(e.key==='Enter')login($('#seat').value,$('#name').value);};
+  app.querySelectorAll('[data-demo]').forEach(b=>b.onclick=async()=>{const x=await S.getStudent(b.dataset.demo);login(x.seat,x.name);});
+}
+async function login(seat,name){
+  seat=String(seat).replace(/\D/g,'');name=String(name).trim();
+  if(!seat||!name){$('#lm').textContent='請輸入座號和姓名。';return;}
+  $('#lm').textContent='登入中…';
+  try{const x=await S.getStudent(seat);
+    if(!x||x.name!==name){$('#lm').textContent='找不到這位學生，請確認座號和姓名，或請老師幫你建立資料。';return;}
+    me=x;prog=await S.getProgress(seat)||{};
+    try{sessionStorage.setItem('learn-me',JSON.stringify({seat,name}));}catch{}
+    S.log(seat,{t:now(),k:'login'});
+    $('#who').textContent=`${me.seat} 號 ${me.name}`;$('#out').hidden=false;showHome();
+  }catch(e){$('#lm').textContent='連線失敗，請稍後再試（'+e.message+'）';}
+}
+$('#out').onclick=()=>{try{sessionStorage.removeItem('learn-me');}catch{}showLogin();};
+
+/* ---------- 路線首頁 ---------- */
+function built(){return me.route.filter(m=>L.MOD[m]);}
+function nextOpen(){return built().find(m=>prog[m]?.status!=='done')||null;}
+function showHome(){
+  cur=null;const nx=nextOpen();const doneN=built().filter(m=>prog[m]?.status==='done').length;
+  app.innerHTML=`<div class="card"><div class="hello">${esc(me.name)}，這是你的學習起點</div><div class="start">${me.start>=9?'國中範圍全部通過':'從「'+esc(me.startLabel)+'」開始'}</div>
+   <div class="ladder">${(me.bands||[]).map((b,g)=>`<div class="${b[2]?'lp':'lf'} ${g===me.start?'start':''}">${L.GN[g]}<br>${b[0]}/${b[1]}</div>`).join('')}</div>
+   <p class="mute">綠色是測驗已經通過的年級，紅框是你的起點。已完成 ${doneN} / ${built().length} 個關卡。</p></div>
+   <h3 style="margin-top:22px">我的學習路線</h3>
+   <ol class="path">${me.route.map((m,i)=>{const c=L.CAT[m],has=!!L.MOD[m],p=prog[m];const done=p?.status==='done';const open=has&&(done||m===nx);
+     return `<li class="${done?'done':m===nx?'now':''} ${!has?'off':''}"><span class="n">${done?'✓':i+1}</span>
+      <div><b>${esc(c.name)}</b><div class="mute">${L.GN[c.grade]}${me.miss?.[m]?'・測驗第 '+me.miss[m].join('、')+' 題':preFor(m)?'・'+esc(L.CAT[preFor(m)].name)+'的預備觀念':''}</div></div>
+      <div>${!has?'<span class="tag off">老師準備中</span>':open?`<button class="btn ${m===nx?'p':''}" data-m="${m}">${done?'複習':p?'繼續':'開始'}</button>`:'<span class="tag">完成上一關後解鎖</span>'}</div></li>`;}).join('')}</ol>
+   ${!nx&&built().length?'<div class="card"><span class="big-ok">目前的關卡都完成了！</span><p>老師會再幫你加上新的關卡。</p></div>':''}`;
+  app.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>openModule(b.dataset.m));
+}
+
+/* ---------- 模組 ---------- */
+function P(m){return prog[m]=prog[m]||{status:'learning',tiers:[{n:0,c:0,passed:false},{n:0,c:0,passed:false},{n:0,c:0,passed:false}],exit:{tries:0,passed:false},time:0,startedAt:now()};}
+async function save(m){const p=P(m);const t=now();p.time+=Math.min(180,Math.round((t-tick)/1000));tick=t;p.updatedAt=t;await S.saveModule(me.seat,m,p).catch(()=>{});}
+function openModule(m){cur={m,tab:'concept',set:null,exit:null};tick=now();if(!prog[m]){P(m);save(m);S.log(me.seat,{t:now(),k:'start',m});}drawModule();window.scrollTo(0,0);}
+function drawModule(){
+  const {m,tab}=cur,M=L.MOD[m],c=L.CAT[m],p=P(m);const allPass=p.tiers.every(t=>t.passed);
+  const tabs=[['concept','1 觀念'],['example','2 例題'],['practice','3 練習'],['exit','4 出場券']];
+  app.innerHTML=`<div class="row" style="margin-top:6px"><button class="btn" id="back">← 回到路線</button></div>
+   <h2 style="margin-top:14px">${esc(c.name)} <span class="tag">${L.GN[c.grade]}</span>${p.status==='done'?' <span class="tag ok">已完成</span>':''}</h2>
+   <p class="mute" style="margin:0">目標：${M.goal}</p>
+   <nav class="mtabs">${tabs.map(([k,v])=>`<button data-tab="${k}" aria-selected="${tab===k}" ${k==='exit'&&!allPass&&p.status!=='done'?'disabled':''}>${v}${k==='exit'&&!allPass&&p.status!=='done'?'（練習完才能開）':''}</button>`).join('')}</nav>
+   <div id="body"></div>`;
+  $('#back').onclick=()=>{save(m);showHome();};
+  app.querySelectorAll('.mtabs button').forEach(b=>b.onclick=()=>{cur.tab=b.dataset.tab;drawModule();});
+  ({concept:drawConcept,example:drawExample,practice:drawPractice,exit:drawExit})[tab]();
+}
+function mountWidget(el,W){let s=W.init();const draw=()=>{el.innerHTML=W.render(s)+W.controls(s);};
+  el.onclick=e=>{const b=e.target.closest('[data-act]');if(!b||b.tagName==='INPUT')return;W.act(s,b.dataset.act,b.dataset.v);draw();};
+  el.onchange=e=>{const i=e.target.closest('input[data-act]');if(i){W.act(s,i.dataset.act,i.value);draw();}};draw();}
+function drawConcept(){const M=L.MOD[cur.m];
+  $('#body').innerHTML=`<div class="card"><h3 style="margin-top:0">你可能會犯的錯</h3><div class="oops"><p style="margin:0 0 6px">${M.wrong.h}</p><p style="margin:0">${M.wrong.why}</p></div>
+   <h3>觀念整理</h3><ol>${M.concept.map(x=>`<li>${x}</li>`).join('')}</ol></div>
+   <div class="card"><h3 style="margin-top:0">動手試試看</h3><div id="wd"></div></div>
+   <div class="row" style="margin-top:14px"><button class="btn p" id="nx">看例題 →</button></div>`;
+  mountWidget($('#wd'),M.widget);$('#nx').onclick=()=>{cur.tab='example';drawModule();};
+  if(!P(cur.m).concept){P(cur.m).concept=true;save(cur.m);}
+}
+function drawExample(){const E=L.MOD[cur.m].example;let k=1;
+  const draw=()=>{$('#body').innerHTML=`<div class="card"><h3 style="margin-top:0">例題</h3><div class="qbox">${E.q}</div>
+   ${E.steps.slice(0,k).map((s,i)=>`<div class="stepl"><b>第 ${i+1} 步</b>　${s}</div>`).join('')}
+   <div class="row" style="margin-top:12px">${k<E.steps.length?'<button class="btn" id="more">下一步</button>':'<button class="btn p" id="nx">開始練習 →</button>'}</div></div>`;
+   if($('#more'))$('#more').onclick=()=>{k++;draw();};if($('#nx'))$('#nx').onclick=()=>{cur.tab='practice';drawModule();};};
+  draw();if(!P(cur.m).example){P(cur.m).example=true;save(cur.m);}
+}
+/* 一組 4 題：答對 3 題以上就通過這一層 */
+function newSet(t){const base=(now()%100000)*7;return{t,qs:[0,1,2,3].map(i=>L.makeQ(cur.m,t,base+i*31+t)),i:0,res:[]};}
+function drawQ(box,q,onDone){
+  box.innerHTML=`<div class="qbox">${q.h}</div>${q.mc?`<div class="mc">${q.mc.map((o,i)=>`<button data-i="${i}">(${'ABCD'[i]}) ${o}</button>`).join('')}</div>`
+    :`<div class="ans"><input id="ai" autocomplete="off" aria-label="你的答案" placeholder="寫答案，分數寫成 3/4"><button class="btn p" id="sb">送出</button></div>`}<div id="fb"></div>`;
+  let doneOnce=false;
+  const finish=(val)=>{if(doneOnce)return;const r=q.check(val);if(!r.ok&&r.note&&!q.mc&&!r.hasOwnProperty('x')&&/看不懂|格式/.test(r.note)){box.querySelector('#fb').innerHTML=`<div class="fb no">${esc(r.note)}</div>`;return;}
+    doneOnce=true;box.querySelectorAll('button,input').forEach(x=>x.disabled=true);
+    box.querySelector('#fb').innerHTML=`<div class="fb ${r.ok?'ok':'no'}">${r.ok?'<b>答對了！</b>':'<b>還不對。</b> 正確答案：'+q.key}${r.note?'<br>'+esc(r.note):''}${!r.ok?'<br>提示：'+q.hint:''}</div><div class="row" style="margin-top:10px"><button class="btn p" id="nq">下一題 →</button></div>`;
+    box.querySelector('#nq').onclick=()=>onDone(r.ok,val);box.querySelector('#nq').focus();};
+  if(q.mc)box.querySelectorAll('.mc button').forEach(b=>b.onclick=()=>{b.classList.add('sel');finish(b.dataset.i);});
+  else{const i=box.querySelector('#ai');i.focus();box.querySelector('#sb').onclick=()=>finish(i.value);i.onkeydown=e=>{if(e.key==='Enter')finish(i.value);};}
+}
+function drawPractice(){
+  const p=P(cur.m);let t=p.tiers.findIndex(x=>!x.passed);
+  if(t<0&&!cur.set){$('#body').innerHTML=`<div class="card"><span class="big-ok">三層練習都通過了！</span><p>準備好就去寫出場券，3 題全對就完成這個關卡。</p><div class="row"><button class="btn p" id="nx">寫出場券 →</button><button class="btn" id="again">再多練一組挑戰題</button></div></div>`;
+    $('#nx').onclick=()=>{cur.tab='exit';drawModule();};$('#again').onclick=()=>{cur.set=newSet(2);drawPractice();};return;}
+  if(!cur.set||cur.set.done)cur.set=newSet(t<0?2:t);
+  const set=cur.set;
+  $('#body').innerHTML=`<div class="card"><div class="tiers">${L.TIERS.map((n,i)=>`<span class="tag ${p.tiers[i].passed?'ok':i===set.t?'warn':''}">${n}${p.tiers[i].passed?' ✓':''}</span>`).join('')}</div>
+   <div class="row" style="justify-content:space-between"><b>${L.TIERS[set.t]}練習・第 ${set.i+1} / 4 題</b><span class="dots">${set.qs.map((_,i)=>`<i class="${set.res[i]===true?'ok':set.res[i]===false?'no':i===set.i?'now':''}"></i>`).join('')}</span></div>
+   <div id="qb"></div><p class="mute">一組 4 題，答對 3 題就能進到下一層。</p></div>`;
+  drawQ($('#qb'),set.qs[set.i],async(ok,val)=>{set.res[set.i]=ok;const tr=p.tiers[set.t];tr.n++;if(ok)tr.c++;
+    S.log(me.seat,{t:now(),k:'answer',m:cur.m,tier:set.t,ok,a:String(val).slice(0,30),q:set.qs[set.i].key});
+    set.i++;
+    if(set.i>=4){const c=set.res.filter(Boolean).length;set.done=true;if(c>=3&&!tr.passed){tr.passed=true;S.log(me.seat,{t:now(),k:'tier',m:cur.m,tier:set.t});}await save(cur.m);
+      $('#body').innerHTML=`<div class="card">${c>=3?`<span class="big-ok">${L.TIERS[set.t]}通過！</span><p>4 題答對 ${c} 題。</p>`:`<h3 style="margin-top:0">4 題答對 ${c} 題</h3><p>差一點！回去看看觀念和例題，再練一組新的題目。</p>`}
+       <div class="row"><button class="btn p" id="go">${c>=3?(p.tiers.every(x=>x.passed)?'繼續':'進到下一層 →'):'再練一組'}</button>${c<3?'<button class="btn" id="cc">回去看觀念</button>':''}</div></div>`;
+      $('#go').onclick=()=>{cur.set=null;drawPractice();};if($('#cc'))$('#cc').onclick=()=>{cur.tab='concept';drawModule();};}
+    else{await save(cur.m);drawPractice();}});
+}
+function drawExit(){
+  const p=P(cur.m);
+  if(!cur.exit||cur.exit.done){const base=(now()%100000)*13+5;cur.exit={qs:[0,1,2].map(t=>L.makeQ(cur.m,t,base+t*17)),i:0,res:[]};}
+  const ex=cur.exit;
+  $('#body').innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><b>出場券・第 ${ex.i+1} / 3 題</b><span class="dots">${ex.qs.map((_,i)=>`<i class="${ex.res[i]===true?'ok':ex.res[i]===false?'no':i===ex.i?'now':''}"></i>`).join('')}</span></div>
+   <div id="qb"></div><p class="mute">3 題全對就完成這個關卡。</p></div>`;
+  drawQ($('#qb'),ex.qs[ex.i],async(ok,val)=>{ex.res[ex.i]=ok;S.log(me.seat,{t:now(),k:'answer',m:cur.m,tier:'exit',ok,a:String(val).slice(0,30),q:ex.qs[ex.i].key});ex.i++;
+    if(ex.i<3){drawExit();return;}
+    ex.done=true;p.exit.tries++;const all=ex.res.every(Boolean);
+    if(all){p.exit.passed=true;if(p.status!=='done'){p.status='done';p.doneAt=now();}}
+    S.log(me.seat,{t:now(),k:'exit',m:cur.m,ok:all});await save(cur.m);
+    $('#body').innerHTML=`<div class="card">${all?`<span class="big-ok">恭喜過關！</span><p>你完成了「${esc(L.CAT[cur.m].name)}」。</p><div class="row"><button class="btn p" id="home">回到路線，看下一關</button></div>`
+      :`<h3 style="margin-top:0">3 題答對 ${ex.res.filter(Boolean).length} 題</h3><p>出場券要全對才能過關。看一下錯的地方，再挑戰一次（題目數字會換）。</p><div class="row"><button class="btn p" id="re">再挑戰一次</button><button class="btn" id="pr">回去練習</button></div>`}</div>`;
+    if($('#home'))$('#home').onclick=showHome;if($('#re'))$('#re').onclick=drawExit;if($('#pr'))$('#pr').onclick=()=>{cur.tab='practice';cur.set=newSet(2);drawModule();};});
+}
+
+(async()=>{S=await window.StoreReady;
+  let saved=null;try{saved=JSON.parse(sessionStorage.getItem('learn-me'));}catch{}
+  if(saved){await showLogin();login(saved.seat,saved.name);}else showLogin();
+})();
+}
+</script>
+</body>
+</html>

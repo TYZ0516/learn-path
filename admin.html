@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>學習路線・老師後台</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="style.css">
+<style>
+.wrap{max-width:1240px}
+table.t{width:100%;border-collapse:collapse;font-size:14px}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left;vertical-align:middle}
+table.t th{color:var(--mute);font-weight:500;font-size:13px}
+table.t td:nth-child(2),table.t td:nth-child(3){white-space:nowrap}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mods{display:flex;gap:3px;flex-wrap:wrap}
+.mods span{font-size:12px;padding:2px 7px;border-radius:5px;background:var(--soft);white-space:nowrap}
+.mods .d{background:color-mix(in srgb,var(--ok) 30%,transparent)}.mods .l{background:color-mix(in srgb,var(--warn) 30%,transparent)}.mods .x{opacity:.45;text-decoration:line-through dotted}
+.scroll{overflow-x:auto}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--soft);border-radius:10px;padding:10px 14px}.kpi b{display:block;font-size:26px;line-height:1.2}
+textarea{width:100%;min-height:90px;font-size:13px;font-family:ui-monospace,monospace}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--mute);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.demo{background:color-mix(in srgb,var(--warn) 16%,transparent);border-radius:8px;padding:8px 12px;font-size:14px}
+#print{display:none}
+/* ---------- 講義 ---------- */
+@page{size:A4;margin:14mm 14mm 14mm}
+.pk{font-size:12.5pt;line-height:1.55;color:#111;background:#fff}
+.pk .pg{break-after:page;padding:0}
+.pk .pg:last-child{break-after:auto}
+.pk h1{font-size:20pt;margin:0 0 2mm}.pk h2{font-size:15pt;margin:0 0 2mm;padding-bottom:1.5mm;border-bottom:2px solid #111}
+.pk h3{font-size:12.5pt;margin:4mm 0 1.5mm;background:#111;color:#fff;padding:1mm 3mm;display:inline-block;border-radius:2px}
+.pk .sub{color:#555;font-size:11pt}
+.pk .oops{border-left:3px solid #c33;padding:1mm 4mm;margin:2mm 0}
+.pk ol,.pk ul{margin:1mm 0;padding-left:6mm}
+.pk .fig .wsvg{max-width:120mm;border:1px solid #bbb}.pk .fig .wctl{display:none}.pk .fig .wmsg{background:#f1f3f6;font-size:11pt}
+.pk .fig .graphwrap{grid-template-columns:62mm 1fr}
+.pk .qs{display:grid;grid-template-columns:1fr 1fr;gap:0 6mm}
+.pk .q{display:flex;gap:2mm;padding:2mm 0;border-bottom:1px dashed #bbb;min-height:19mm;break-inside:avoid;font-size:11.5pt}
+.pk .q.mcq{min-height:17mm}
+.pk .q .no{font-weight:700;min-width:6mm}
+.pk .q .tx{flex:1}
+.pk .q .bx{width:24mm;height:11mm;border:1.4px solid #111;border-radius:1.5mm;flex:none}
+.pk .opts{font-size:11pt;margin-top:1mm;display:grid;grid-template-columns:1fr 1fr;gap:0 3mm}
+.pk .exit{border:2px solid #111;border-radius:3mm;padding:2mm 4mm;margin-top:3mm}
+.pk .ladder div{font-size:9pt;border:1px solid #ccc}
+.pk .route li{margin:1mm 0}
+.pk .keyt{width:100%;border-collapse:collapse;font-size:10.5pt}.pk .keyt td,.pk .keyt th{border:1px solid #bbb;padding:1mm 2mm;text-align:left;vertical-align:top}
+.pk .stp{font-size:12pt}
+@media print{.pbar{display:none!important}body{background:#fff}header.top,#main{display:none!important}#print{display:block!important}}
+body.printmode{background:#fff}.pbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:12px 0;position:sticky;top:0;background:#fff;z-index:3}
+body.printmode header.top,body.printmode #main{display:none}body.printmode #print{display:block;max-width:190mm;margin:0 auto}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><h1>學習路線・老師後台</h1><span class="mute" id="mode"></span><span style="flex:1"></span><a class="btn" href="index.html" style="display:inline-flex;align-items:center;text-decoration:none">學生頁面</a></div></header>
+<main class="wrap" id="main"><p class="mute">載入中…</p></main>
+<div id="print"></div>
+<script src="config.js"></script>
+<script src="modules.js"></script>
+<script src="mock.js"></script>
+<script src="store.js"></script>
+<script>
+{
+const L=window.Learn,$=s=>document.querySelector(s),main=$('#main');
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let S,students={},progress={},sel=null;
+const preFor=m=>Object.keys(L.PRE).find(k=>L.PRE[k].includes(m));
+const fmtT=t=>t?new Date(t).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+
+async function boot(){
+  S=await window.StoreReady;
+  $('#mode').textContent=S.mode==='demo'?'示範模式（資料存在這台裝置）':'Firebase 模式';
+  if(S.mode==='firebase'){const u=await S.user();if(!u||u.isAnonymous){main.innerHTML=`<div class="card" style="max-width:460px"><h2>老師登入</h2><p class="mute">用 Firebase 安全規則裡設定的老師 Google 帳號登入。</p><button class="btn p" id="gin">用 Google 登入</button><p class="err" id="ge"></p></div>`;
+    $('#gin').onclick=async()=>{try{await S.signInAdmin();boot();}catch(e){$('#ge').textContent='登入失敗：'+e.message;}};return;}}
+  await load();
+  const h=location.hash.match(/^#print-(\w+)$/);if(h){renderPacket(h[1]==='all'?Object.keys(students):[h[1]]);document.body.classList.add('printmode');}
+}
+async function load(){
+  try{[students,progress]=await Promise.all([S.listStudents(),S.listProgress()]);}catch(e){main.innerHTML=`<div class="card"><p class="err">讀取失敗：${esc(e.message)}。請確認你的帳號在安全規則裡有讀取權限。</p></div>`;return;}
+  render();
+}
+function stat(seat){const st=students[seat],pr=progress[seat]||{};const b=st.route.filter(m=>L.MOD[m]);
+  let n=0,c=0,time=0,last=0;Object.values(pr).forEach(p=>{(p.tiers||[]).forEach(t=>{n+=t.n||0;c+=t.c||0;});time+=p.time||0;last=Math.max(last,p.updatedAt||0);});
+  return{built:b,done:b.filter(m=>pr[m]?.status==='done').length,n,c,acc:n?c/n:null,time,last};}
+
+function render(){
+  const seats=Object.keys(students).sort((a,b)=>a-b);
+  const all=seats.map(stat);const active=all.filter(x=>x.last>Date.now()-7*864e5).length;
+  main.innerHTML=`
+  <div class="card"><div class="kpis">
+   <div class="kpi"><span class="mute">學生</span><b>${seats.length}</b></div>
+   <div class="kpi"><span class="mute">7 天內有學習</span><b>${active}</b></div>
+   <div class="kpi"><span class="mute">完成的關卡</span><b>${all.reduce((a,x)=>a+x.done,0)}</b></div>
+   <div class="kpi"><span class="mute">全班練習答對率</span><b>${(()=>{const n=all.reduce((a,x)=>a+x.n,0),c=all.reduce((a,x)=>a+x.c,0);return n?Math.round(c/n*100)+'%':'—';})()}</b></div></div></div>
+  <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">學生進度</h2>
+   <div class="row"><button class="btn" id="rf">重新整理</button><button class="btn" id="pall" ${seats.length?'':'disabled'}>列印全部講義</button></div></div>
+   <div class="legend"><span><i style="background:color-mix(in srgb,var(--ok) 30%,transparent)"></i>已完成</span><span><i style="background:color-mix(in srgb,var(--warn) 30%,transparent)"></i>學習中</span><span><i style="background:var(--soft)"></i>還沒開始</span><span style="text-decoration:line-through dotted">老師準備中</span></div>
+   ${seats.length?`<div class="scroll"><table class="t"><tr><th>座號</th><th>姓名</th><th>起點</th><th>學習路線</th><th>完成</th><th>練習答對率</th><th>學習時間</th><th>最後學習</th><th></th></tr>
+   ${seats.map((s,i)=>{const st=students[s],x=all[i],pr=progress[s]||{};return `<tr><td class="n">${esc(s)}</td><td>${esc(st.name)}</td><td><b>${esc(st.startLabel)}</b></td>
+     <td><div class="mods">${st.route.map(m=>`<span class="${!L.MOD[m]?'x':pr[m]?.status==='done'?'d':pr[m]?'l':''}" title="${esc(L.CAT[m].name)}">${esc(L.CAT[m].name)}</span>`).join('')}</div></td>
+     <td class="n">${x.done}/${x.built.length}</td><td class="n">${x.acc===null?'—':Math.round(x.acc*100)+'%（'+x.c+'/'+x.n+'）'}</td><td class="n">${Math.round(x.time/60)} 分</td><td class="n">${fmtT(x.last)}</td>
+     <td><div class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn" data-d="${esc(s)}">詳細</button><button class="btn" data-p="${esc(s)}">講義</button></div></td></tr>`;}).join('')}</table></div>`:'<p class="mute">還沒有學生。請在下面匯入判定系統的資料。</p>'}
+  </div>
+  <div class="card hidden" id="detail" hidden></div>
+  <div class="card"><h2>匯入學生</h2><p class="mute">到判定系統的「全班總覽」按「匯出給學習系統」，把複製的內容貼在這裡。系統會依每位學生的作答自動產生學習路線；同一個座號再次匯入會更新路線，學習紀錄會保留。</p>
+   <textarea id="imp" placeholder='{"type":"diag","students":[{"seat":"1","name":"…","s":"cccw…"}]}'></textarea>
+   <div class="row" style="margin-top:8px"><button class="btn p" id="doimp">匯入</button>${S.mode==='demo'?'<button class="btn" id="mock">載入 5 位模擬學生</button><button class="btn" id="clr">清空示範資料</button>':''}<span class="mute" id="im" role="status"></span></div></div>
+  <div class="card"><h2>模組狀態</h2><p class="mute">路線會用到的觀念關卡共 ${L.CATALOG.length} 個，目前完成 ${Object.keys(L.MOD).length} 個：${Object.keys(L.MOD).map(m=>esc(L.CAT[m].name)).join('、')}。</p>
+   <p class="mute">全班路線最常需要、但還沒做的關卡：${(()=>{const c={};seats.forEach(s=>students[s].route.forEach(m=>{if(!L.MOD[m])c[m]=(c[m]||0)+1;}));return Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([m,n])=>esc(L.CAT[m].name)+`（${n} 人）`).join('、')||'—';})()}</p></div>`;
+  $('#rf').onclick=load;
+  $('#pall').onclick=()=>printPackets(seats);
+  main.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>detail(b.dataset.d));
+  main.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>printPackets([b.dataset.p]));
+  $('#doimp').onclick=()=>doImport($('#imp').value);
+  if($('#mock'))$('#mock').onclick=()=>doImport(JSON.stringify(window.LEARN_MOCK));
+  if($('#clr'))$('#clr').onclick=async e=>{if(e.target.dataset.sure!=='1'){e.target.dataset.sure='1';e.target.textContent='再按一次確認清空';return;}await S.clearAll();load();};
+  if(sel&&students[sel])detail(sel);
+}
+async function doImport(txt){
+  let data;try{data=JSON.parse(txt);}catch{$('#im').textContent='格式不對，請貼上判定系統匯出的完整內容。';return;}
+  const arr=(Array.isArray(data)?data:data.students||[]).map(L.record).filter(Boolean);
+  if(!arr.length){$('#im').textContent='沒有讀到學生資料。';return;}
+  try{await S.putStudents(arr);$('#im').textContent=`已匯入 ${arr.length} 位學生。`;await load();}catch(e){$('#im').textContent='匯入失敗：'+e.message;}
+}
+async function detail(seat){
+  sel=seat;const st=students[seat],pr=progress[seat]||{};const box=$('#detail');box.hidden=false;
+  const logs=await S.listLogs(seat,25).catch(()=>[]);
+  const label=e=>({login:'登入',start:'開始關卡',answer:e.ok?'答對':'答錯',tier:'通過一層練習',exit:e.ok?'出場券過關':'出場券未過'}[e.k]||e.k);
+  box.innerHTML=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(st.seat)} 號 ${esc(st.name)}：起點 ${esc(st.startLabel)}</h2><button class="btn" id="dx">關閉</button></div>
+   <div class="ladder">${(st.bands||[]).map((b,g)=>`<div class="${b[2]?'lp':'lf'} ${g===st.start?'start':''}">${L.GN[g]}<br>${b[0]}/${b[1]}</div>`).join('')}</div>
+   <h3>各關卡</h3><div class="scroll"><table class="t"><tr><th>關卡</th><th>測驗錯的題</th><th>狀態</th><th>基礎</th><th>進階</th><th>挑戰</th><th>出場券</th><th>時間</th></tr>
+   ${st.route.map(m=>{const p=pr[m];const t=i=>p?.tiers?.[i]?`${p.tiers[i].c}/${p.tiers[i].n}${p.tiers[i].passed?' ✓':''}`:'—';
+     return `<tr><td>${esc(L.CAT[m].name)}</td><td>${st.miss?.[m]?st.miss[m].join('、'):preFor(m)?'預備觀念':''}</td><td>${!L.MOD[m]?'<span class="tag off">準備中</span>':p?.status==='done'?'<span class="tag ok">完成</span>':p?'<span class="tag warn">學習中</span>':'未開始'}</td>
+     <td class="n">${t(0)}</td><td class="n">${t(1)}</td><td class="n">${t(2)}</td><td class="n">${p?`${p.exit?.tries||0} 次${p.exit?.passed?' ✓':''}`:'—'}</td><td class="n">${p?Math.round((p.time||0)/60)+' 分':'—'}</td></tr>`;}).join('')}</table></div>
+   <h3>最近紀錄</h3>${logs.length?`<table class="t"><tr><th>時間</th><th>事件</th><th>關卡</th><th>內容</th></tr>${logs.map(e=>`<tr><td class="n">${fmtT(e.t)}</td><td>${label(e)}</td><td>${e.m?esc(L.CAT[e.m]?.name||e.m):''}</td><td class="mute">${e.k==='answer'?`${e.tier==='exit'?'出場券':L.TIERS[e.tier]||''}：學生寫 ${esc(e.a)}，正解 ${esc(e.q)}`:''}</td></tr>`).join('')}</table>`:'<p class="mute">還沒有紀錄。</p>'}`;
+  $('#dx').onclick=()=>{box.hidden=true;sel=null;};box.scrollIntoView({behavior:'smooth'});
+}
+
+/* ---------- 講義 ---------- */
+function packet(seat){
+  const st=students[seat];const mods=st.route.filter(m=>L.MOD[m]);const later=st.route.filter(m=>!L.MOD[m]);const keys=[];
+  const sd=(mi,t,i)=>(+seat)*10007+mi*101+t*13+i;
+  let h=`<section class="pg"><h1>我的數學學習路線</h1><div class="sub">${esc(st.seat)} 號 ${esc(st.name)}</div>
+   <h3>我的起點</h3><p style="font-size:15pt;margin:1mm 0"><b>${st.start>=9?'國中範圍全部通過':'從「'+esc(st.startLabel)+'」開始'}</b></p>
+   <div class="ladder">${(st.bands||[]).map((b,g)=>`<div class="${b[2]?'lp':'lf'} ${g===st.start?'start':''}">${L.GN[g]}<br>${b[0]}/${b[1]}</div>`).join('')}</div>
+   <p class="sub">綠色是測驗已經通過的年級，紅框是起點。</p>
+   <h3>這份講義的關卡</h3><ol class="route">${mods.map(m=>`<li><b>${esc(L.CAT[m].name)}</b>（${L.GN[L.CAT[m].grade]}）— ${st.miss?.[m]?'測驗第 '+st.miss[m].join('、')+' 題':preFor(m)?esc(L.CAT[preFor(m)].name)+'的預備觀念':''}</li>`).join('')}</ol>
+   ${later.length?`<h3>之後的關卡</h3><p>${later.map(m=>esc(L.CAT[m].name)).join('、')}</p>`:''}
+   <h3>怎麼使用</h3><ol><li>先讀「你可能會犯的錯」和「觀念整理」，看懂圖解。</li><li>跟著例題的步驟走一次。</li><li>練習分成基礎、進階、挑戰，每層 4 題。</li><li>最後寫出場券，3 題全對就完成這個關卡。</li></ol></section>`;
+  mods.forEach((m,mi)=>{const M=L.MOD[m],c=L.CAT[m];const W=M.widget;const ps=(W.printState||W.init)();
+    const qs=[0,1,2].map(t=>[0,1,2,3].map(i=>L.makeQ(m,t,sd(mi,t,i))));const ex=[0,1,2].map(t=>L.makeQ(m,t,sd(mi,t,9)));
+    keys.push({m,qs,ex});
+    const qh=(q,n)=>`<div class="q ${q.mc?'mcq':''}"><span class="no">${n}.</span><div class="tx">${q.h}${q.mc?`<div class="opts">${q.mc.map((o,i)=>`<span>(${'ABCD'[i]}) ${o}</span>`).join('')}</div>`:''}</div><span class="bx"></span></div>`;
+    h+=`<section class="pg"><h2>關卡 ${mi+1}　${esc(c.name)}　<span class="sub">${L.GN[c.grade]}</span></h2>
+     <p><b>目標：</b>${M.goal}</p>
+     <h3>你可能會犯的錯</h3><div class="oops"><p style="margin:0">${M.wrong.h}</p><p style="margin:1mm 0 0">${M.wrong.why}</p></div>
+     <h3>觀念整理</h3><ol>${M.concept.map(x=>`<li>${x}</li>`).join('')}</ol>
+     <h3>圖解</h3><div class="fig">${W.render(ps)}</div>
+     <h3>例題</h3><p style="margin:1mm 0"><b>${M.example.q}</b></p><ol>${M.example.steps.map(x=>`<li>${x}</li>`).join('')}</ol></section>
+     <section class="pg"><h2>關卡 ${mi+1} 練習　<span class="sub">每層 4 題，答對 3 題就進到下一層</span></h2>
+     ${qs.map((set,t)=>`<h3>${L.TIERS[t]}</h3><div class="qs">${set.map((q,i)=>qh(q,i+1)).join('')}</div>`).join('')}
+     <div class="exit"><b>出場券</b>（3 題全對才算過關）<div class="qs">${ex.map((q,i)=>qh(q,i+1)).join('')}</div></div></section>`;});
+  h+=`<section class="pg"><h2>答案（老師用）　${esc(st.seat)} 號 ${esc(st.name)}</h2>${keys.map((k,mi)=>`<p style="margin:2mm 0 1mm"><b>關卡 ${mi+1} ${esc(L.CAT[k.m].name)}</b></p>
+    <table class="keyt"><tr><th>層</th><th>1</th><th>2</th><th>3</th><th>4</th></tr>${k.qs.map((set,t)=>`<tr><td>${L.TIERS[t]}</td>${set.map(q=>`<td>${q.mc?'(' + 'ABCD'[q.ans]+') ':''}${esc(q.key)}</td>`).join('')}</tr>`).join('')}
+    <tr><td>出場券</td>${k.ex.map(q=>`<td>${q.mc?'(' + 'ABCD'[q.ans]+') ':''}${esc(q.key)}</td>`).join('')}<td></td></tr></table>`).join('')}</section>`;
+  return h;
+}
+function renderPacket(seats){$('#print').innerHTML=`<div class="pk">${seats.filter(s=>students[s]).map(packet).join('')}</div>`;}
+function printPackets(seats){renderPacket(seats);
+  $('#print').insertAdjacentHTML('afterbegin',`<div class="pbar"><button class="btn p" id="pp">列印 / 另存 PDF</button><button class="btn" id="pb">返回後台</button><span class="mute">預覽版（Claude 網頁）不能列印時，請把這個系統放到 GitHub Pages 後再印。</span></div>`);
+  document.body.classList.add('printmode');window.scrollTo(0,0);
+  $('#pp').onclick=()=>{try{window.print();}catch{}};$('#pb').onclick=()=>{document.body.classList.remove('printmode');$('#print').innerHTML='';};}
+boot();
+}
+</script>
+</body>
+</html>
