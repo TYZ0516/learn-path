@@ -104,19 +104,25 @@ $('#out').onclick=()=>{try{localStorage.removeItem('learn-me');}catch{}showLogin
 
 /* ---------- 路線首頁 ---------- */
 function built(){return me.route.filter(m=>L.MOD[m]);}
-function nextOpen(){return built().find(m=>prog[m]?.status!=='done')||null;}
+/* 起點以下的年級全部開放（可自由練習）；起點以上（含起點）依序解鎖 */
+const lowOpen=m=>L.CAT[m].grade<(me.start??0);
+function nextOpen(){return built().find(m=>!lowOpen(m)&&prog[m]?.status!=='done')||null;}
+function extras(){return L.CATALOG.filter(c=>c.grade<(me.start??0)&&L.MOD[c.id]&&!me.route.includes(c.id)).map(c=>c.id);}
 function showHome(){
   cur=null;const nx=PREVIEW?null:nextOpen();const doneN=built().filter(m=>prog[m]?.status==='done').length;
   app.innerHTML=(PREVIEW?`<div class="card"><div class="hello">老師預覽模式</div><p style="margin:6px 0 0">${built().length} 個關卡全部開放，可以不照順序點進去看；練習的三層和出場券也可以直接切換。這裡的作答<b>不會儲存</b>，也不會出現在學生紀錄裡。</p></div>
    <h3 style="margin-top:22px">所有關卡（由低年級到高年級）</h3>`:`<div class="card"><div class="hello">${esc(me.name)}，這是你的學習起點</div><div class="start">${me.start>=9?'國中範圍全部通過':'從「'+esc(me.startLabel)+'」開始'}</div>
    <div class="ladder">${(me.bands||[]).map((b,g)=>`<div class="${b[2]?'lp':'lf'} ${g===me.start?'start':''}">${L.GN[g]}<br>${b[0]}/${b[1]}</div>`).join('')}</div>
-   <p class="mute">綠色是測驗已經通過的年級，紅框是你的起點。已完成 ${doneN} / ${built().length} 個關卡。</p></div>
+   <p class="mute">綠色是測驗已經通過的年級，紅框是你的起點。已完成 ${doneN} / ${built().length} 個關卡。</p>
+   ${me.start>0?`<p style="margin:6px 0 0">${me.start>=9?'所有關卡都可以自由點開練習。':`${L.GN[me.start-1]}以下的關卡隨時可以點開練習；從起點「${esc(L.GN[me.start])}」開始的關卡，要完成上一關才會解鎖。`}</p>`:''}</div>
    <h3 style="margin-top:22px">我的學習路線</h3>`)+`
-   <ol class="path">${me.route.map((m,i)=>{const c=L.CAT[m],has=!!L.MOD[m],p=prog[m];const done=p?.status==='done';const open=has&&(PREVIEW||done||m===nx);
+   <ol class="path">${me.route.map((m,i)=>{const c=L.CAT[m],has=!!L.MOD[m],p=prog[m];const done=p?.status==='done';const open=has&&(PREVIEW||done||lowOpen(m)||m===nx);
      return `<li class="${done?'done':m===nx?'now':''} ${!has?'off':''}"><span class="n">${done?'✓':i+1}</span>
       <div><b>${esc(c.name)}</b><div class="mute">${L.GN[c.grade]}${me.miss?.[m]?'・測驗第 '+me.miss[m].join('、')+' 題':preFor(m)?'・'+esc(L.CAT[preFor(m)].name)+'的預備觀念':''}</div></div>
       <div>${!has?'<span class="tag off">老師準備中</span>':open?`<button class="btn ${m===nx?'p':''}" data-m="${m}">${done?'複習':p?'繼續':'開始'}</button>`:'<span class="tag">完成上一關後解鎖</span>'}</div></li>`;}).join('')}</ol>
-   ${!PREVIEW&&!nx&&built().length?'<div class="card"><span class="big-ok">目前的關卡都完成了！</span><p>老師會再幫你加上新的關卡。</p></div>':''}<div class="instWrap"></div>`;
+   ${!PREVIEW&&built().length&&built().every(m=>prog[m]?.status==='done')?'<div class="card"><span class="big-ok">目前的關卡都完成了！</span><p>老師會再幫你加上新的關卡。</p></div>':''}
+   ${!PREVIEW&&extras().length?`<h3 style="margin-top:22px">更低年級的其他關卡（想複習就點開）</h3><p class="mute" style="margin:0 0 8px">這些不在你的路線上，但隨時可以練習。</p>
+   <ol class="path">${extras().map(m=>{const c=L.CAT[m],p=prog[m],done=p?.status==='done';return `<li class="${done?'done':''}"><span class="n">${done?'✓':'・'}</span><div><b>${esc(c.name)}</b><div class="mute">${L.GN[c.grade]}</div></div><div><button class="btn" data-m="${m}">${done?'複習':p?'繼續':'練習'}</button></div></li>`;}).join('')}</ol>`:''}<div class="instWrap"></div>`;
   refreshInstall();
   app.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>openModule(b.dataset.m));
 }
