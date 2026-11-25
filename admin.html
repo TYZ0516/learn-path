@@ -30,22 +30,22 @@ textarea{width:100%;min-height:90px;font-size:13px;font-family:ui-monospace,mono
 .pk .pg{break-after:page;padding:0}
 .pk .pg:last-child{break-after:auto}
 .pk h1{font-size:20pt;margin:0 0 2mm}.pk h2{font-size:15pt;margin:0 0 2mm;padding-bottom:1.5mm;border-bottom:2px solid #111}
-.pk h3{font-size:12.5pt;margin:4mm 0 1.5mm;background:#111;color:#fff;padding:1mm 3mm;display:inline-block;border-radius:2px}
+.pk h3{font-size:12.5pt;margin:2.5mm 0 1mm;background:#111;color:#fff;padding:1mm 3mm;display:inline-block;border-radius:2px}
 .pk .sub{color:#555;font-size:11pt}
 .pk .oops{border-left:3px solid #c33;padding:1mm 4mm;margin:2mm 0}
 .pk ol,.pk ul{margin:1mm 0;padding-left:6mm}
 .pk .fig .wsvg{max-width:120mm;border:1px solid #bbb}.pk .fig .wctl{display:none}.pk .fig .wmsg{background:#f1f3f6;font-size:11pt}
 .pk .fig .graphwrap{grid-template-columns:62mm 1fr}
 .pk .qs{display:grid;grid-template-columns:1fr 1fr;gap:0 6mm}
-.pk .q{display:flex;gap:2mm;padding:2mm 0;border-bottom:1px dashed #bbb;min-height:19mm;break-inside:avoid;font-size:11.5pt}
-.pk .q.mcq{min-height:17mm}
+.pk .q{display:flex;gap:2mm;padding:1.5mm 0;border-bottom:1px dashed #bbb;min-height:16mm;break-inside:avoid;font-size:11.5pt}
+.pk .q.mcq{min-height:0}.pk .q.mcl{grid-column:1/-1}.pk .q.mcl .opts{display:flex;flex-wrap:wrap;gap:0 6mm;font-size:10.5pt}.pk .q.mcl .opts span{white-space:nowrap}
 .pk .q .no{font-weight:700;min-width:6mm}
 .pk .q .tx{flex:1}
-.pk .q .bx{width:24mm;height:11mm;border:1.4px solid #111;border-radius:1.5mm;flex:none}
-.pk .opts{font-size:11pt;margin-top:1mm;display:grid;grid-template-columns:1fr 1fr;gap:0 3mm}
-.pk .exit{border:2px solid #111;border-radius:3mm;padding:2mm 4mm;margin-top:3mm}
+.pk .q .bx{width:20mm;height:10mm;border:1.4px solid #111;border-radius:1.5mm;flex:none}
+.pk .opts{font-size:10.5pt;line-height:1.4;margin-top:.5mm;display:grid;grid-template-columns:1fr 1fr;gap:0 2mm}
+.pk .exit{border:2px solid #111;border-radius:3mm;padding:1.5mm 4mm;margin-top:2.5mm}
 .pk .ladder div{font-size:9pt;border:1px solid #ccc}
-.pk .route li{margin:1mm 0}
+.pk .route{columns:2;column-gap:6mm;font-size:11pt}.pk .route li{margin:.6mm 0;break-inside:avoid}
 .pk .keyt{width:100%;border-collapse:collapse;font-size:10.5pt}.pk .keyt td,.pk .keyt th{border:1px solid #bbb;padding:1mm 2mm;text-align:left;vertical-align:top}
 .pk .stp{font-size:12pt}
 @media print{.pbar{display:none!important}body{background:#fff}header.top,#main{display:none!important}#print{display:block!important}}
@@ -140,7 +140,7 @@ async function detail(seat){
 
 /* ---------- 講義 ---------- */
 function packet(seat){
-  const st=students[seat];const mods=st.route.filter(m=>L.MOD[m]);const later=st.route.filter(m=>!L.MOD[m]);const keys=[];
+  const st=students[seat];const mods=st.route.filter(m=>L.MOD[m]);const later=st.route.filter(m=>!L.MOD[m]);
   const sd=(mi,t,i)=>(+seat)*10007+mi*101+t*13+i;
   let h=`<section class="pg"><h1>我的數學學習路線</h1><div class="sub">${esc(st.seat)} 號 ${esc(st.name)}</div>
    <h3>我的起點</h3><p style="font-size:15pt;margin:1mm 0"><b>${st.start>=9?'國中範圍全部通過':'從「'+esc(st.startLabel)+'」開始'}</b></p>
@@ -148,23 +148,14 @@ function packet(seat){
    <p class="sub">綠色是測驗已經通過的年級，紅框是起點。</p>
    <h3>這份講義的關卡</h3><ol class="route">${mods.map(m=>`<li><b>${esc(L.CAT[m].name)}</b>（${L.GN[L.CAT[m].grade]}）— ${st.miss?.[m]?'測驗第 '+st.miss[m].join('、')+' 題':preFor(m)?esc(L.CAT[preFor(m)].name)+'的預備觀念':''}</li>`).join('')}</ol>
    ${later.length?`<h3>之後的關卡</h3><p>${later.map(m=>esc(L.CAT[m].name)).join('、')}</p>`:''}
-   <h3>怎麼使用</h3><ol><li>先讀「你可能會犯的錯」和「觀念整理」，看懂圖解。</li><li>跟著例題的步驟走一次。</li><li>練習分成基礎、進階、挑戰，每層 4 題。</li><li>最後寫出場券，3 題全對就完成這個關卡。</li></ol></section>`;
-  mods.forEach((m,mi)=>{const M=L.MOD[m],c=L.CAT[m];const W=M.widget;const ps=(W.printState||W.init)();
+   <h3>怎麼使用</h3><ol><li>用手機打開學習路線，進入這一關，先看「觀念」和「例題」，動手試試看圖解。</li><li>看懂以後，寫講義上這一關的練習：分成基礎、進階、挑戰，每層 4 題。</li><li>最後寫出場券，寫完拿給老師看。</li></ol></section>`;
+  mods.forEach((m,mi)=>{const c=L.CAT[m];
     const qs=[0,1,2].map(t=>[0,1,2,3].map(i=>L.makeQ(m,t,sd(mi,t,i))));const ex=[0,1,2].map(t=>L.makeQ(m,t,sd(mi,t,9)));
-    keys.push({m,qs,ex});
-    const qh=(q,n)=>`<div class="q ${q.mc?'mcq':''}"><span class="no">${n}.</span><div class="tx">${q.h}${q.mc?`<div class="opts">${q.mc.map((o,i)=>`<span>(${'ABCD'[i]}) ${o}</span>`).join('')}</div>`:''}</div><span class="bx"></span></div>`;
+    const qh=(q,n)=>`<div class="q ${q.mc?'mcq':''} ${q.mc&&Math.max(...q.mc.map(o=>String(o).replace(/<[^>]*>/g,'').length))>9?'mcl':''}"><span class="no">${n}.</span><div class="tx">${q.h}${q.mc?`<div class="opts">${q.mc.map((o,i)=>`<span>(${'ABCD'[i]}) ${o}</span>`).join('')}</div>`:''}</div><span class="bx"></span></div>`;
     h+=`<section class="pg"><h2>關卡 ${mi+1}　${esc(c.name)}　<span class="sub">${L.GN[c.grade]}</span></h2>
-     <p><b>目標：</b>${M.goal}</p>
-     <h3>你可能會犯的錯</h3><div class="oops"><p style="margin:0">${M.wrong.h}</p><p style="margin:1mm 0 0">${M.wrong.why}</p></div>
-     <h3>觀念整理</h3><ol>${M.concept.map(x=>`<li>${x}</li>`).join('')}</ol>
-     <h3>圖解</h3><div class="fig">${W.render(ps)}</div>
-     <h3>例題</h3><p style="margin:1mm 0"><b>${M.example.q}</b></p><ol>${M.example.steps.map(x=>`<li>${x}</li>`).join('')}</ol></section>
-     <section class="pg"><h2>關卡 ${mi+1} 練習　<span class="sub">每層 4 題，答對 3 題就進到下一層</span></h2>
+     <p class="sub" style="margin:0 0 1mm">先用手機看這一關的觀念和例題，再寫下面的題目。每層 4 題，答對 3 題就進到下一層。</p>
      ${qs.map((set,t)=>`<h3>${L.TIERS[t]}</h3><div class="qs">${set.map((q,i)=>qh(q,i+1)).join('')}</div>`).join('')}
      <div class="exit"><b>出場券</b>（3 題全對才算過關）<div class="qs">${ex.map((q,i)=>qh(q,i+1)).join('')}</div></div></section>`;});
-  h+=`<section class="pg"><h2>答案（老師用）　${esc(st.seat)} 號 ${esc(st.name)}</h2>${keys.map((k,mi)=>`<p style="margin:2mm 0 1mm"><b>關卡 ${mi+1} ${esc(L.CAT[k.m].name)}</b></p>
-    <table class="keyt"><tr><th>層</th><th>1</th><th>2</th><th>3</th><th>4</th></tr>${k.qs.map((set,t)=>`<tr><td>${L.TIERS[t]}</td>${set.map(q=>`<td>${q.mc?'(' + 'ABCD'[q.ans]+') ':''}${esc(q.key)}</td>`).join('')}</tr>`).join('')}
-    <tr><td>出場券</td>${k.ex.map(q=>`<td>${q.mc?'(' + 'ABCD'[q.ans]+') ':''}${esc(q.key)}</td>`).join('')}<td></td></tr></table>`).join('')}</section>`;
   return h;
 }
 function renderPacket(seats){$('#print').innerHTML=`<div class="pk">${seats.filter(s=>students[s]).map(packet).join('')}</div>`;}
