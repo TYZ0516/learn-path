@@ -54,3 +54,11 @@ Realtime Database 免費方案大約是：同時連線 100 個、儲存 1 GB、�
 
 ## 新增模組
 在 `modules.js` 的 `MOD` 裡加一個物件（goal、wrong、concept、widget、example、tiers），id 要和 `CATALOG` 裡的一樣。學生的路線不用重算，下次登入就會看到新關卡解鎖。
+
+## 加到手機桌面（PWA）
+- `manifest.webmanifest`、`sw.js`、`icon-192.png`、`icon-512.png`、`icon-maskable-512.png`、`apple-touch-icon.png` 讓學生頁面可以安裝到手機桌面，點圖示就以全螢幕開啟。
+- Android（Chrome）：登入頁下方會出現「加到手機桌面」按鈕；沒有按鈕時，按右上角「⋮」→「加到主畫面」。
+- iPhone（Safari）：按「分享」→「加入主畫面」。
+- 在 LINE 裡開啟的網頁不能安裝，畫面會提示學生改用預設瀏覽器開啟。
+- `sw.js` 一律先抓網路上的最新檔案，更新 modules.js 後學生馬上看到新版；沒網路時才用上次的版本。
+- 登入狀態會記在學生自己的手機上，下次從桌面圖示打開不用重新輸入；按「登出」就會清除。

@@ -123,9 +123,9 @@ MOD['A-dist']={
     init:()=>({a:-2,c:5,wrong:false}),
     printState:()=>({a:-2,c:5,wrong:false}),
     render(s){const a=s.a,c=s.c;const as=a===-1?'−1':neg(a);const p1=lin(a,0),p2=a*c;
-      const box=(x,w,top,mid,bot,col)=>`<rect x="${x}" y="40" width="${w}" height="70" fill="${col}" stroke="#333"/><text x="${x+w/2}" y="30" font-size="16" text-anchor="middle">${top}</text><text x="${x+w/2}" y="72" font-size="15" text-anchor="middle">${mid}</text><text x="${x+w/2}" y="96" font-size="17" font-weight="700" text-anchor="middle">${bot}</text>`;
+      const box=(x,w,top,mid,bot,col)=>`<rect x="${x}" y="40" width="${w}" height="70" fill="${col}" stroke="#333"/><text x="${x+w/2}" y="30" font-size="19" text-anchor="middle">${top}</text><text x="${x+w/2}" y="72" font-size="18" text-anchor="middle">${mid}</text><text x="${x+w/2}" y="96" font-size="20" font-weight="700" text-anchor="middle">${bot}</text>`;
       const cs=c>0?'+'+c:'−'+(-c);const wa=s.wrong;
-      return `<svg viewBox="0 0 440 125" class="wsvg"><text x="12" y="82" font-size="18" font-weight="700">${as}</text><line x1="52" y1="40" x2="52" y2="110" stroke="#333" stroke-width="2"/>
+      return `<svg viewBox="0 0 440 125" class="wsvg"><text x="12" y="82" font-size="21" font-weight="700">${as}</text><line x1="52" y1="40" x2="52" y2="110" stroke="#333" stroke-width="2"/>
        ${box(60,170,'x',`(${as}) × x`,p1,'#cfe1f7')}${box(230,170,cs,`(${as}) × (${cs})`,wa?(-p2>0?'+'+(-p2):'−'+p2):(p2>0?'+'+p2:'−'+(-p2)),wa?'#f7c9c9':'#f6d7a8')}</svg>
       <p class="wmsg">${wa?`這是常見的錯：只把 ${as} 乘給 x，第二格的正負號沒有跟著乘，寫成 ${lin(a,-p2)}。<b>正確</b>是 ${lin(a,p2)}。`
         :`${as}(x ${c>0?'+ '+c:'− '+(-c)}) 拆成兩格：每一格都要乘 ${as}。左格 ${p1}，右格 (${as}) × (${cs}) = ${p2>0?'+'+p2:'−'+(-p2)}，合起來是 <b>${lin(a,p2)}</b>。`}</p>`;},
@@ -156,7 +156,7 @@ MOD['F-addunlike']={
     render(s){const [a,b,c,d]=this.presets[s.p];const W=300,H=34;
       const bar=(n,den,y,col)=>{const N=s.N||den;const fit=N%den===0;let g=`<rect x="10" y="${y}" width="${W}" height="${H}" fill="#fff" stroke="#333"/><rect x="10" y="${y}" width="${W*n/den}" height="${H}" fill="${col}" opacity=".75"/>`;
         for(let k=1;k<N;k++)g+=`<line x1="${10+W*k/N}" y1="${y}" x2="${10+W*k/N}" y2="${y+H}" stroke="#333" stroke-width="${fit?1:.6}" ${fit?'':'stroke-dasharray="3 3"'}/>`;
-        const lab=s.N?(fit?`= ${n*N/den}/${N}`:'切不剛好'):'';return g+`<text x="${W+18}" y="${y+22}" font-size="15">${n}/${den} ${lab}</text>`;};
+        const lab=s.N?(fit?`= ${n*N/den}/${N}`:'切不剛好'):'';return g+`<text x="${W+18}" y="${y+22}" font-size="18">${n}/${den} ${lab}</text>`;};
       const N=s.N,ok=N&&N%b===0&&N%d===0;
       return `<svg viewBox="0 0 440 110" class="wsvg">${bar(a,b,10,'#4f8fd8')}${bar(c,d,60,'#e39b3b')}</svg>
       <p class="wmsg">${!N?'先看原本的樣子：兩個分數每一份的大小不一樣。按下面的數字，把兩條都改切成同樣的份數。':ok?`兩條都切成 ${N} 份了！${F(a,b)} = ${F(a*N/b,N)}，${F(c,d)} = ${F(c*N/d,N)}，現在可以相加：${F(a*N/b+c*N/d,N)}${gcd(a*N/b+c*N/d,N)>1?'，再約分。':'。'}`:`切成 ${N} 份時，有一條切不剛好（虛線）。${N} 要同時是 ${b} 和 ${d} 的倍數才行。`}</p>`;},
@@ -223,8 +223,8 @@ MOD['R-base']={
     init:()=>({q:4,p:3,known:'comp',v:120}),
     printState:()=>({q:4,p:3,known:'comp',v:120}),
     render(s){const W=300,cw=W/Math.max(s.q,s.p);const one=s.known==='comp'?s.v/s.p:s.v/s.q;const base=one*s.q,comp=one*s.p;const f=x=>Number.isInteger(x)?x:x.toFixed(2).replace(/\.?0+$/,'');
-      const cells=(n,y,col,lab,val)=>{let g='';for(let i=0;i<n;i++)g+=`<rect x="${70+i*cw}" y="${y}" width="${cw}" height="30" fill="${col}" stroke="#333"/><text x="${70+i*cw+cw/2}" y="${y+20}" font-size="12" text-anchor="middle">${f(one)}</text>`;
-        return g+`<text x="4" y="${y+20}" font-size="14">${lab}</text><text x="${74+n*cw}" y="${y+20}" font-size="14" font-weight="700">${f(val)}</text>`;};
+      const cells=(n,y,col,lab,val)=>{let g='';for(let i=0;i<n;i++)g+=`<rect x="${70+i*cw}" y="${y}" width="${cw}" height="30" fill="${col}" stroke="#333"/><text x="${70+i*cw+cw/2}" y="${y+20}" font-size="15" text-anchor="middle">${f(one)}</text>`;
+        return g+`<text x="4" y="${y+20}" font-size="17">${lab}</text><text x="${74+n*cw}" y="${y+20}" font-size="17" font-weight="700">${f(val)}</text>`;};
       return `<svg viewBox="0 0 440 100" class="wsvg">${cells(s.q,10,'#cfe1f7','基準量',base)}${cells(s.p,58,'#f6d7a8','比較量',comp)}</svg>
       <p class="wmsg">比較量是基準量的 ${F(s.p,s.q)}。已知${s.known==='comp'?'比較量':'基準量'}是 ${s.v}，${s.known==='comp'?`它有 ${s.p} 份`:`它有 ${s.q} 份`}，所以一份是 ${f(one)}；${s.known==='comp'?`基準量 ${s.q} 份 = ${f(base)}`:`比較量 ${s.p} 份 = ${f(comp)}`}。</p>`;},
     controls(s){return `<div class="wctl">分母（基準量切幾份）：${[2,3,4,5,6,8].map(n=>`<button class="chip" data-act="q" data-v="${n}" aria-pressed="${s.q===n}">${n}</button>`).join('')}</div>
@@ -253,12 +253,12 @@ MOD['A-lin']={
     init:()=>({p:0,a:3,b:2,c:1,d:8,msg:''}),
     printState:()=>({p:0,a:3,b:2,c:1,d:8,msg:'藍色方塊是 x，橘色圓點是 1。兩邊同時拿走 1 個 x、再拿走 2 個圓點，變成 2x = 6，兩邊同除以 2，得到 x = 3。'}),
     presets:[[3,2,1,8],[4,1,2,7],[5,3,2,12]],
-    render(s){const side=(a,b,x0)=>{let g='';const n=Math.min(a,8);for(let i=0;i<n;i++)g+=`<rect x="${x0+(i%4)*26}" y="${36-Math.floor(i/4)*26}" width="22" height="22" rx="3" fill="#4f8fd8"/><text x="${x0+(i%4)*26+11}" y="${52-Math.floor(i/4)*26}" fill="#fff" font-size="13" text-anchor="middle">x</text>`;
+    render(s){const side=(a,b,x0)=>{let g='';const n=Math.min(a,8);for(let i=0;i<n;i++)g+=`<rect x="${x0+(i%4)*26}" y="${36-Math.floor(i/4)*26}" width="22" height="22" rx="3" fill="#4f8fd8"/><text x="${x0+(i%4)*26+11}" y="${52-Math.floor(i/4)*26}" fill="#fff" font-size="16" text-anchor="middle">x</text>`;
         const m=Math.min(b,12);for(let i=0;i<m;i++)g+=`<circle cx="${x0+112+(i%4)*18}" cy="${48-Math.floor(i/4)*18}" r="7" fill="#e39b3b"/>`;return g;};
       const ex=(a,b)=>[(a?(a===1?'x':a+'x'):''),(b?b:'')].filter(Boolean).join(' + ')||'0';
       const done=s.a===1&&s.b===0&&s.c===0||s.c===1&&s.d===0&&s.a===0;
       return `<svg viewBox="0 0 440 120" class="wsvg"><polygon points="215,110 225,110 220,72" fill="#555"/><line x1="20" y1="72" x2="420" y2="72" stroke="#555" stroke-width="4"/>
-      ${side(s.a,s.b,24)}${side(s.c,s.d,236)}<text x="110" y="100" font-size="15" text-anchor="middle">${ex(s.a,s.b)}</text><text x="330" y="100" font-size="15" text-anchor="middle">${ex(s.c,s.d)}</text></svg>
+      ${side(s.a,s.b,24)}${side(s.c,s.d,236)}<text x="110" y="100" font-size="18" text-anchor="middle">${ex(s.a,s.b)}</text><text x="330" y="100" font-size="18" text-anchor="middle">${ex(s.c,s.d)}</text></svg>
       <p class="wmsg">${done?`解出來了：x = ${s.a?s.d:s.b}。把它代回原本的方程式檢查看看！`:s.msg||'藍色方塊是 x，橘色圓點是 1。用下面的按鈕，讓兩邊做一樣的事，最後只剩一個 x。'}</p>`;},
     controls(s){const g=gcd(gcd(s.a,s.b),gcd(s.c,s.d));return `<div class="wctl"><button class="chip" data-act="m1">兩邊各拿走 1 個圓點</button><button class="chip" data-act="mx">兩邊各拿走 1 個 x</button>
       ${[2,3,4,5].filter(k=>g%k===0).map(k=>`<button class="chip" data-act="dv" data-v="${k}">兩邊同除以 ${k}</button>`).join('')}</div>
@@ -288,9 +288,9 @@ MOD['G-sim']={
     init:()=>({k:2}),
     printState:()=>({k:3}),
     render(s){const u=18,k=s.k;let g='';
-      for(let i=0;i<2*k;i++)for(let j=0;j<k;j++)g+=`<rect x="${130+i*u}" y="${10+j*u}" width="${u}" height="${u}" fill="${(Math.floor(i/2)+j)%2?'#cfe1f7':'#a9c9ef'}" stroke="#fff"/>`;
-      return `<svg viewBox="0 0 440 ${Math.max(90,k*u+30)}" class="wsvg"><rect x="10" y="10" width="${2*u}" height="${u}" fill="#e39b3b"/><text x="10" y="${u+30}" font-size="13">原來：面積 2 格</text>${g}
-      <text x="${130}" y="${k*u+26}" font-size="13">放大 ${k} 倍：面積 ${2*k*k} 格（${k*k} 個原圖）</text></svg>
+      for(let i=0;i<2*k;i++)for(let j=0;j<k;j++)g+=`<rect x="${160+i*u}" y="${10+j*u}" width="${u}" height="${u}" fill="${(Math.floor(i/2)+j)%2?'#cfe1f7':'#a9c9ef'}" stroke="#fff"/>`;
+      return `<svg viewBox="0 0 440 ${Math.max(90,k*u+30)}" class="wsvg"><rect x="10" y="10" width="${2*u}" height="${u}" fill="#e39b3b"/><text x="10" y="${u+30}" font-size="16">原來：2 格</text>${g}
+      <text x="${160}" y="${k*u+28}" font-size="16">放大 ${k} 倍：面積 ${2*k*k} 格（${k*k} 個原圖）</text></svg>
       <p class="wmsg">邊長變 ${k} 倍 → 面積變 ${k} × ${k} = ${k*k} 倍。所以邊長比 1 : ${k}，面積比 1 : ${k*k}。三角形也一樣。</p>`;},
     controls(s){return `<div class="wctl">放大倍數：${[1,2,3,4].map(n=>`<button class="chip" data-act="k" data-v="${n}" aria-pressed="${s.k===n}">${n} 倍</button>`).join('')}</div>`;},
     act(s,a,v){s.k=+v;}
@@ -353,7 +353,7 @@ function parseQuad(str){let t=norm(str).replace(/\s/g,'').replace(/x\^2|x²/g,'X
 function quad(a,b,c){const t=[];if(a)t.push(a===1?'x²':a===-1?'−x²':neg(a)+'x²');if(b)t.push((t.length?(b>0?' + ':' − '):(b<0?'−':''))+(Math.abs(b)===1?'':Math.abs(b))+'x');if(c)t.push((t.length?(c>0?' + ':' − '):(c<0?'−':''))+Math.abs(c));return t.join('')||'0';}
 function quadCheck(a,b,c){return str=>{const p=parseQuad(str);if(!p)return{ok:false,note:'請寫成 x² + 6x + 9 這樣（x² 可以打成 x^2）。'};
   if(p.a===a&&p.b===b&&p.c===c)return{ok:true};if(p.a===a&&p.c===c&&p.b===0&&b!==0)return{ok:false,note:'少了中間的 x 項：(x + a)² 要展開成 x² + 2ax + a²。'};return{ok:false};};}
-const svgNL=(lo,hi,marks='',W=420)=>{const X=v=>20+(v-lo)*(W-40)/(hi-lo);let g=`<line x1="10" y1="50" x2="${W-10}" y2="50" stroke="#333" stroke-width="2"/>`;for(let v=lo;v<=hi;v++)g+=`<line x1="${X(v)}" y1="44" x2="${X(v)}" y2="56" stroke="#333"/><text x="${X(v)}" y="74" font-size="12" text-anchor="middle">${neg(v)}</text>`;return{g:g+marks,X};};
+const svgNL=(lo,hi,marks='',W=420)=>{const X=v=>20+(v-lo)*(W-40)/(hi-lo);let g=`<line x1="10" y1="50" x2="${W-10}" y2="50" stroke="#333" stroke-width="2"/>`;const step=hi-lo>12?2:1;for(let v=lo;v<=hi;v++)g+=`<line x1="${X(v)}" y1="44" x2="${X(v)}" y2="56" stroke="#333"/>`+((v-lo)%step===0||v===0?`<text x="${X(v)}" y="76" font-size="17" text-anchor="middle">${neg(v)}</text>`:'');return{g:g+marks,X};};
 
 /* ---------- 分數乘除 ---------- */
 MOD['F-muldiv']={
@@ -363,7 +363,7 @@ MOD['F-muldiv']={
   widget:{init:()=>({p:0}),printState:()=>({p:0}),presets:[[2,3,3,4],[1,2,4,5],[3,5,2,3]],
     render(s){const [a,b,c,d]=this.presets[s.p];const W=240,H=160,x0=100,y0=10;let g='';
       for(let i=0;i<b;i++)for(let j=0;j<d;j++){const inA=i<a,inC=j<c;g+=`<rect x="${x0+i*W/b}" y="${y0+j*H/d}" width="${W/b}" height="${H/d}" fill="${inA&&inC?'#7a5cc4':inA?'#cfe1f7':inC?'#f6d7a8':'#fff'}" stroke="#333"/>`;}
-      return `<svg viewBox="0 0 440 ${H+40}" class="wsvg">${g}<text x="${x0}" y="${H+30}" font-size="13">直的切 ${b} 份取 ${a} 份（${a}/${b}），橫的切 ${d} 份取 ${c} 份（${c}/${d}）</text></svg>
+      return `<svg viewBox="0 0 440 ${H+40}" class="wsvg">${g}<text x="${x0}" y="${H+30}" font-size="16">直的取 ${a}/${b}，橫的取 ${c}/${d}</text></svg>
       <p class="wmsg">紫色是兩者重疊的部分：${a*c} 格，全部共有 ${b*d} 格，所以 ${F(a,b)} × ${F(c,d)} = ${F(a*c,b*d)}${gcd(a*c,b*d)>1?' = '+fh(R(a*c,b*d)):''}。除法就換成乘倒數：${F(a,b)} ÷ ${F(c,d)} = ${F(a,b)} × ${F(d,c)} = ${fh(R(a*d,b*c))}。</p>`;},
     controls(s){return `<div class="wctl">換一題：${this.presets.map((p,i)=>`<button class="chip" data-act="p" data-v="${i}" aria-pressed="${s.p===i}">${p[0]}/${p[1]} × ${p[2]}/${p[3]}</button>`).join('')}</div>`;},
     act(s,a,v){s.p=+v;}},
@@ -383,7 +383,7 @@ MOD['M-tri']={
   widget:{init:()=>({t:.5}),printState:()=>({t:.3}),
     render(s){const x0=60,W=300,H=140,ax=x0+W*s.t;return `<svg viewBox="0 0 440 180" class="wsvg"><rect x="${x0}" y="20" width="${W}" height="${H}" fill="#f6d7a8" stroke="#333" stroke-dasharray="5 4"/>
       <polygon points="${x0},${20+H} ${x0+W},${20+H} ${ax},20" fill="#4f8fd8" opacity=".85" stroke="#333"/><line x1="${ax}" y1="20" x2="${ax}" y2="${20+H}" stroke="#d23c3c" stroke-width="2" stroke-dasharray="4 3"/>
-      <text x="${x0+W/2}" y="176" font-size="14" text-anchor="middle">底</text><text x="${ax+6}" y="${20+H/2}" font-size="14" fill="#d23c3c">高</text></svg>
+      <text x="${x0+W/2}" y="176" font-size="17" text-anchor="middle">底</text><text x="${ax+6}" y="${20+H/2}" font-size="17" fill="#d23c3c">高</text></svg>
       <p class="wmsg">藍色三角形的頂點不管移到哪裡，左右兩塊橘色加起來都剛好和藍色一樣大，所以三角形 = 長方形的一半 = 底 × 高 ÷ 2。</p>`;},
     controls(s){return `<div class="wctl">移動頂點：${[.1,.3,.5,.7,.9].map(v=>`<button class="chip" data-act="t" data-v="${v}" aria-pressed="${s.t===v}">${Math.round(v*10)}</button>`).join('')}</div>`;},
     act(s,a,v){s.t=+v;}},
@@ -440,11 +440,11 @@ MOD['M-circle']={
   wrong:{h:'常見的錯：半徑 5 的圓面積算成 31.4（其實是周長），或算成 5 × 2 × 3.14 ÷ 2。',why:'周長是「繞一圈的長度」，單位是公分；面積是「圓裡面有多大」，單位是平方公分。面積的公式要乘兩次半徑。'},
   concept:['圓周長 = 直徑 × 圓周率 = 半徑 × 2 × 圓周率。','圓面積 = 半徑 × 半徑 × 圓周率。','題目給直徑時，先除以 2 得到半徑。'],
   widget:{init:()=>({r:3}),printState:()=>({r:3}),
-    render(s){const R0=s.r*14,n=12;let g=`<circle cx="90" cy="95" r="${R0}" fill="#cfe1f7" stroke="#333"/><line x1="90" y1="95" x2="${90+R0}" y2="95" stroke="#d23c3c" stroke-width="2"/><text x="${90+R0/2}" y="90" font-size="12" text-anchor="middle" fill="#d23c3c">r=${s.r}</text>`;
+    render(s){const R0=s.r*14,n=12;let g=`<circle cx="90" cy="95" r="${R0}" fill="#cfe1f7" stroke="#333"/><line x1="90" y1="95" x2="${90+R0}" y2="95" stroke="#d23c3c" stroke-width="2"/><text x="${90+R0/2}" y="90" font-size="15" text-anchor="middle" fill="#d23c3c">r=${s.r}</text>`;
       const w=Math.PI*R0/ (n/2);for(let i=0;i<n;i++){const up=i%2===0,x=200+Math.floor(i/2)*w+(up?0:w/2),y=95;
         g+=up?`<path d="M${x},${y+R0/2} L${x+w},${y+R0/2} L${x+w/2},${y-R0/2} Z" fill="${i%4?'#a9c9ef':'#7fa9db'}" stroke="#335"/>`:`<path d="M${x},${y-R0/2} L${x+w},${y-R0/2} L${x+w/2},${y+R0/2} Z" fill="${i%4===1?'#a9c9ef':'#7fa9db'}" stroke="#335"/>`;}
       const C=+(2*s.r*3.14).toFixed(2),A=+(s.r*s.r*3.14).toFixed(2);
-      return `<svg viewBox="0 0 440 190" class="wsvg">${g}<text x="200" y="${95+R0/2+20}" font-size="12">排開：長 ≈ r × 圓周率，寬 = r</text></svg>
+      return `<svg viewBox="0 0 440 190" class="wsvg">${g}<text x="200" y="${95+R0/2+20}" font-size="15">長 ≈ r × 圓周率、寬 r</text></svg>
       <p class="wmsg">周長 = ${s.r} × 2 × 3.14 = <b>${C} 公分</b>　面積 = ${s.r} × ${s.r} × 3.14 = <b>${A} 平方公分</b>。把圓切成很多扇形排開，會接近長 r × 3.14、寬 r 的長方形，所以面積 = r × r × 3.14。</p>`;},
     controls(s){return `<div class="wctl">半徑：${[1,2,3,4,5].map(v=>`<button class="chip" data-act="r" data-v="${v}" aria-pressed="${s.r===v}">${v}</button>`).join('')}</div>`;},
     act(s,a,v){s.r=+v;}},
@@ -462,8 +462,8 @@ MOD['R-rate']={
   concept:['速率 = 每單位時間走的距離（時速 60 公里 = 每小時 60 公里）。','距離 = 速率 × 時間；時間 = 距離 ÷ 速率。','換算單位：1 公里 = 1000 公尺，1 小時 = 60 分鐘。'],
   widget:{init:()=>({v:60,t:2.5}),printState:()=>({v:60,t:2.5}),
     render(s){const W=360,max=5,px=W/max;let g=`<line x1="40" y1="60" x2="${40+W}" y2="60" stroke="#999" stroke-width="2"/>`;
-      for(let i=0;i<=max;i++)g+=`<line x1="${40+i*px}" y1="54" x2="${40+i*px}" y2="66" stroke="#999"/><text x="${40+i*px}" y="84" font-size="11" text-anchor="middle">${i} 時</text>`;
-      for(let i=0;i<Math.ceil(s.t);i++){const w=Math.min(1,s.t-i)*px;g+=`<rect x="${40+i*px}" y="34" width="${w-2}" height="18" fill="${i%2?'#7fa9db':'#a9c9ef'}"/><text x="${40+i*px+w/2}" y="47" font-size="11" text-anchor="middle">${+(s.v*Math.min(1,s.t-i)).toFixed(1)}</text>`;}
+      for(let i=0;i<=max;i++)g+=`<line x1="${40+i*px}" y1="54" x2="${40+i*px}" y2="66" stroke="#999"/><text x="${40+i*px}" y="84" font-size="14" text-anchor="middle">${i} 時</text>`;
+      for(let i=0;i<Math.ceil(s.t);i++){const w=Math.min(1,s.t-i)*px;g+=`<rect x="${40+i*px}" y="34" width="${w-2}" height="18" fill="${i%2?'#7fa9db':'#a9c9ef'}"/><text x="${40+i*px+w/2}" y="47" font-size="14" text-anchor="middle">${+(s.v*Math.min(1,s.t-i)).toFixed(1)}</text>`;}
       return `<svg viewBox="0 0 440 100" class="wsvg">${g}</svg><p class="wmsg">每 1 小時走 ${s.v} 公里，走 ${s.t} 小時：${s.v} × ${s.t} = <b>${+(s.v*s.t).toFixed(1)} 公里</b>。每一段代表 1 小時走的距離。</p>`;},
     controls(s){return `<div class="wctl">時速：${[40,60,80].map(v=>`<button class="chip" data-act="v" data-v="${v}" aria-pressed="${s.v===v}">${v}</button>`).join('')}</div><div class="wctl">時間（小時）：${[1,1.5,2.5,3,4.5].map(v=>`<button class="chip" data-act="t" data-v="${v}" aria-pressed="${s.t===v}">${v}</button>`).join('')}</div>`;},
     act(s,a,v){s[a]=+v;}},
@@ -500,7 +500,7 @@ MOD['A-neg']={
   widget:{init:()=>({a:-3,op:'+',b:5}),printState:()=>({a:-3,op:'-',b:4}),
     render(s){const res=s.op==='+'?s.a+s.b:s.a-s.b;const N=svgNL(-10,10);const x1=N.X(s.a),x2=N.X(res);
       const mk=`<circle cx="${x1}" cy="50" r="6" fill="#4f8fd8"/><circle cx="${x2}" cy="50" r="6" fill="#d23c3c"/><path d="M${x1},36 Q${(x1+x2)/2},${10} ${x2},36" fill="none" stroke="#d23c3c" stroke-width="2" marker-end="url(#ar)"/>`;
-      return `<svg viewBox="0 0 440 90" class="wsvg"><defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#d23c3c"/></marker></defs>${N.g}${mk}</svg>
+      return `<svg viewBox="0 0 440 92" class="wsvg"><defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#d23c3c"/></marker></defs>${N.g}${mk}</svg>
       <p class="wmsg">從 ${neg(s.a)} 出發，${s.op==='+'?(s.b>=0?'加正數往右':'加負數往左'):(s.b>=0?'減正數往左':'減負數 = 加正數，往右')}走 ${Math.abs(s.b)} 格，到 <b>${neg(res)}</b>。</p>`;},
     controls(s){return `<div class="wctl">起點：${[-6,-3,0,2].map(v=>`<button class="chip" data-act="a" data-v="${v}" aria-pressed="${s.a===v}">${neg(v)}</button>`).join('')}</div>
       <div class="wctl">運算：<button class="chip" data-act="op" data-v="+" aria-pressed="${s.op==='+'}">加</button><button class="chip" data-act="op" data-v="-" aria-pressed="${s.op==='-'}">減</button>　${[5,4,-2,-4].map(v=>`<button class="chip" data-act="b" data-v="${v}" aria-pressed="${s.b===v}">${v<0?'('+neg(v)+')':v}</button>`).join('')}</div>`;},
@@ -563,7 +563,7 @@ MOD['N-coord']={
   concept:['(x, y)：x 是左右（右正左負），y 是上下（上正下負）。','象限：右上一、左上二、左下三、右下四。','和 y 軸的交點：令 x = 0，得到 (0, b)；和 x 軸的交點：令 y = 0。'],
   widget:{init:()=>({x:-3,y:4,a:2,b:-3}),printState:()=>({x:-3,y:4,a:2,b:-3}),
     render(s){const S=18,O=150,X=v=>O+v*S,Y=v=>O-v*S;let g='';for(let i=-7;i<=7;i++)g+=`<line x1="${X(i)}" y1="${Y(7.5)}" x2="${X(i)}" y2="${Y(-7.5)}" stroke="#e5e8ee"/><line x1="${X(-7.5)}" y1="${Y(i)}" x2="${X(7.5)}" y2="${Y(i)}" stroke="#e5e8ee"/>`;
-      g+=`<line x1="${X(-8)}" y1="${O}" x2="${X(8)}" y2="${O}" stroke="#666"/><line x1="${O}" y1="${Y(8)}" x2="${O}" y2="${Y(-8)}" stroke="#666"/><text x="${X(4)}" y="${Y(6)}" fill="#999" font-size="14">一</text><text x="${X(-5)}" y="${Y(6)}" fill="#999" font-size="14">二</text><text x="${X(-5)}" y="${Y(-5)}" fill="#999" font-size="14">三</text><text x="${X(4)}" y="${Y(-5)}" fill="#999" font-size="14">四</text>`;
+      g+=`<line x1="${X(-8)}" y1="${O}" x2="${X(8)}" y2="${O}" stroke="#666"/><line x1="${O}" y1="${Y(8)}" x2="${O}" y2="${Y(-8)}" stroke="#666"/><text x="${X(4)}" y="${Y(6)}" fill="#999" font-size="17">一</text><text x="${X(-5)}" y="${Y(6)}" fill="#999" font-size="17">二</text><text x="${X(-5)}" y="${Y(-5)}" fill="#999" font-size="17">三</text><text x="${X(4)}" y="${Y(-5)}" fill="#999" font-size="17">四</text>`;
       const x1=-8,x2=8;g+=`<line x1="${X(x1)}" y1="${Y(s.a*x1+s.b)}" x2="${X(x2)}" y2="${Y(s.a*x2+s.b)}" stroke="#d23c3c" stroke-width="2.5"/><circle cx="${X(0)}" cy="${Y(s.b)}" r="5" fill="#d23c3c"/>`;
       g+=`<line x1="${X(s.x)}" y1="${O}" x2="${X(s.x)}" y2="${Y(s.y)}" stroke="#4f8fd8" stroke-dasharray="3 3"/><line x1="${O}" y1="${Y(s.y)}" x2="${X(s.x)}" y2="${Y(s.y)}" stroke="#4f8fd8" stroke-dasharray="3 3"/><circle cx="${X(s.x)}" cy="${Y(s.y)}" r="6" fill="#4f8fd8"/>`;
       const q=s.x>0&&s.y>0?'第一':s.x<0&&s.y>0?'第二':s.x<0&&s.y<0?'第三':s.x>0&&s.y<0?'第四':'坐標軸上';
@@ -585,7 +585,7 @@ MOD['A-ineq']={
   wrong:{h:'常見的錯：−2x > 6，兩邊除以 −2 得到 x > −3。',why:'2 < 5，兩邊乘以 −1 變成 −2 和 −5，在數線上 −2 在 −5 的右邊，所以 −2 > −5：大小關係反過來了。因此除以 −2 時，不等號要變向：x < −3。'},
   concept:['不等式兩邊同加、同減一個數，不等號不變。','兩邊同乘、同除一個正數，不等號不變。','兩邊同乘、同除一個負數，不等號要變向。','數線上：> 或 < 用空心圓，≥ 或 ≤ 用實心圓。'],
   widget:{init:()=>({flip:false}),printState:()=>({flip:true}),
-    render(s){const N=svgNL(-6,6);const a=s.flip?-2:2,b=s.flip?-5:5;const mk=`<circle cx="${N.X(a)}" cy="50" r="7" fill="#4f8fd8"/><circle cx="${N.X(b)}" cy="50" r="7" fill="#e39b3b"/><text x="${N.X(a)}" y="30" font-size="14" text-anchor="middle">${neg(a)}</text><text x="${N.X(b)}" y="30" font-size="14" text-anchor="middle">${neg(b)}</text>`;
+    render(s){const N=svgNL(-6,6);const a=s.flip?-2:2,b=s.flip?-5:5;const mk=`<circle cx="${N.X(a)}" cy="50" r="7" fill="#4f8fd8"/><circle cx="${N.X(b)}" cy="50" r="7" fill="#e39b3b"/><text x="${N.X(a)}" y="30" font-size="17" text-anchor="middle">${neg(a)}</text><text x="${N.X(b)}" y="30" font-size="17" text-anchor="middle">${neg(b)}</text>`;
       return `<svg viewBox="0 0 440 90" class="wsvg">${N.g}${mk}</svg><p class="wmsg">${s.flip?'兩邊乘以 −1：−2 和 −5。−2 在右邊，所以 <b>−2 > −5</b>，不等號變向了。':'原本：2 < 5（藍點在橘點左邊）。按「兩邊乘以 −1」看看會怎樣。'}</p>`;},
     controls(s){return `<div class="wctl"><button class="chip big" data-act="f">${s.flip?'回到 2 < 5':'兩邊乘以 −1'}</button></div>`;},
     act(s){s.flip=!s.flip;}},
@@ -605,9 +605,9 @@ MOD['A-poly']={
   concept:['(a + b)² = a² + 2ab + b²；(a − b)² = a² − 2ab + b²。','(a + b)(a − b) = a² − b²（平方差）。','因式分解是展開的相反：看到 x² − 9 = x² − 3²，就是 (x + 3)(x − 3)。'],
   widget:{init:()=>({b:3}),printState:()=>({b:3}),
     render(s){const x=120,u=22,b=s.b*u,x0=60,y0=15;
-      return `<svg viewBox="0 0 440 ${x+b+40}" class="wsvg"><rect x="${x0}" y="${y0}" width="${x}" height="${x}" fill="#cfe1f7" stroke="#333"/><rect x="${x0+x}" y="${y0}" width="${b}" height="${x}" fill="#f6d7a8" stroke="#333"/><rect x="${x0}" y="${y0+x}" width="${x}" height="${b}" fill="#f6d7a8" stroke="#333"/><rect x="${x0+x}" y="${y0+x}" width="${b}" height="${b}" fill="#b9e3c6" stroke="#333"/>
-      <text x="${x0+x/2}" y="${y0+x/2+5}" font-size="16" text-anchor="middle">x²</text><text x="${x0+x+b/2}" y="${y0+x/2+5}" font-size="14" text-anchor="middle">${s.b}x</text><text x="${x0+x/2}" y="${y0+x+b/2+5}" font-size="14" text-anchor="middle">${s.b}x</text><text x="${x0+x+b/2}" y="${y0+x+b/2+5}" font-size="14" text-anchor="middle">${s.b*s.b}</text>
-      <text x="${x0+x/2}" y="${y0+x+b+22}" font-size="13" text-anchor="middle">x</text><text x="${x0+x+b/2}" y="${y0+x+b+22}" font-size="13" text-anchor="middle">${s.b}</text></svg>
+      return `<svg viewBox="0 0 440 ${x+b+46}" class="wsvg"><rect x="${x0}" y="${y0}" width="${x}" height="${x}" fill="#cfe1f7" stroke="#333"/><rect x="${x0+x}" y="${y0}" width="${b}" height="${x}" fill="#f6d7a8" stroke="#333"/><rect x="${x0}" y="${y0+x}" width="${x}" height="${b}" fill="#f6d7a8" stroke="#333"/><rect x="${x0+x}" y="${y0+x}" width="${b}" height="${b}" fill="#b9e3c6" stroke="#333"/>
+      <text x="${x0+x/2}" y="${y0+x/2+5}" font-size="19" text-anchor="middle">x²</text><text x="${x0+x+b/2}" y="${y0+x/2+5}" font-size="17" text-anchor="middle">${s.b}x</text><text x="${x0+x/2}" y="${y0+x+b/2+5}" font-size="17" text-anchor="middle">${s.b}x</text><text x="${x0+x+b/2}" y="${y0+x+b/2+5}" font-size="17" text-anchor="middle">${s.b*s.b}</text>
+      <text x="${x0+x/2}" y="${y0+x+b+22}" font-size="16" text-anchor="middle">x</text><text x="${x0+x+b/2}" y="${y0+x+b+22}" font-size="16" text-anchor="middle">${s.b}</text></svg>
       <p class="wmsg">邊長 x + ${s.b} 的正方形，面積 = x² + ${s.b}x + ${s.b}x + ${s.b*s.b} = <b>x² + ${2*s.b}x + ${s.b*s.b}</b>。兩塊橘色長方形就是常被漏掉的「2ab」。</p>`;},
     controls(s){return `<div class="wctl">(x + b)²，b = ${[1,2,3,4].map(v=>`<button class="chip" data-act="b" data-v="${v}" aria-pressed="${s.b===v}">${v}</button>`).join('')}</div>`;},
     act(s,a,v){s.b=+v;}},
@@ -645,7 +645,7 @@ MOD['G-pyth']={
   widget:{init:()=>({p:0}),printState:()=>({p:0}),presets:[[3,4,5],[5,12,13],[6,8,10]],
     render(s){const [a,b,c]=this.presets[s.p];const u=120/b;const A=a*u,B=b*u,x0=40+A,y0=A+20;
       return `<svg viewBox="0 0 440 ${y0+B+10}" class="wsvg"><rect x="${x0-A}" y="${y0-A}" width="${A}" height="${A}" fill="#f6d7a8" stroke="#333"/><rect x="${x0}" y="${y0}" width="${B}" height="${B}" fill="#cfe1f7" stroke="#333"/>
-      <polygon points="${x0},${y0} ${x0+B},${y0} ${x0},${y0-A}" fill="#fff" stroke="#d23c3c" stroke-width="2.5"/><text x="${x0-A/2}" y="${y0-A/2+5}" font-size="13" text-anchor="middle">${a}²=${a*a}</text><text x="${x0+B/2}" y="${y0+B/2+5}" font-size="13" text-anchor="middle">${b}²=${b*b}</text><text x="${x0+B/2+14}" y="${y0-A/2-4}" font-size="14" fill="#d23c3c">斜邊 ${c}</text></svg>
+      <polygon points="${x0},${y0} ${x0+B},${y0} ${x0},${y0-A}" fill="#fff" stroke="#d23c3c" stroke-width="2.5"/><text x="${x0-A/2}" y="${y0-A/2+5}" font-size="16" text-anchor="middle">${a}²=${a*a}</text><text x="${x0+B/2}" y="${y0+B/2+5}" font-size="16" text-anchor="middle">${b}²=${b*b}</text><text x="${x0+B/2+14}" y="${y0-A/2-4}" font-size="17" fill="#d23c3c">斜邊 ${c}</text></svg>
       <p class="wmsg">兩股 ${a}、${b}：${a}² + ${b}² = ${a*a} + ${b*b} = ${c*c} = ${c}²，所以斜邊是 <b>${c}</b>。兩個正方形的面積加起來，會等於斜邊上的正方形。</p>`;},
     controls(s){return `<div class="wctl">${this.presets.map((p,i)=>`<button class="chip" data-act="p" data-v="${i}" aria-pressed="${s.p===i}">${p.join('、')}</button>`).join('')}</div>`;},
     act(s,a,v){s.p=+v;}},
@@ -684,8 +684,7 @@ MOD['N-seq']={
   wrong:{h:'常見的錯：2, 5, 8, … 的第 10 項算成 2 + 3 × 10 = 32；1 + 3 + … + 19 算成 200（忘記除以 2）。',why:'從第 1 項到第 10 項只「跳」了 9 次，所以是加 9 個公差。求和時把數列倒過來配對，每一對都是首項 + 末項，但這樣算了兩次，要除以 2。'},
   concept:['公差 d = 後一項 − 前一項。','第 n 項：aₙ = a₁ + (n − 1)d。','和 = (首項 + 末項) × 項數 ÷ 2。','項數 = (末項 − 首項) ÷ d + 1。'],
   widget:{init:()=>({a:2,d:3,n:6}),printState:()=>({a:2,d:3,n:6}),
-    render(s){const t=Array.from({length:s.n},(_,i)=>s.a+i*s.d);const W=Math.min(52,380/s.n);
-      return `<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:flex-end">${t.map((v,i)=>`<div style="text-align:center"><div style="width:${W}px;height:${12+v*3}px;max-height:150px;background:${i===s.n-1?'#d23c3c':'#a9c9ef'};border-radius:4px 4px 0 0"></div><div style="font-size:13px">${v}</div><div class="mute" style="font-size:11px">a${i+1}</div></div>`).join('')}</div>
+    render(s){const t=Array.from({length:s.n},(_,i)=>s.a+i*s.d);return `<div style="display:flex;gap:3px;align-items:flex-end">${t.map((v,i)=>`<div style="text-align:center;flex:1 1 0;max-width:52px"><div style="width:100%;height:${12+v*3}px;max-height:150px;background:${i===s.n-1?'#d23c3c':'#a9c9ef'};border-radius:4px 4px 0 0"></div><div style="font-size:13px">${v}</div><div class="mute" style="font-size:11px">a${i+1}</div></div>`).join('')}</div>
       <p class="wmsg">第 ${s.n} 項 = ${s.a} + (${s.n} − 1) × ${s.d} = <b>${t[s.n-1]}</b>（從 a₁ 到 a${s.n} 跳了 ${s.n-1} 次）。前 ${s.n} 項的和 = (${s.a} + ${t[s.n-1]}) × ${s.n} ÷ 2 = <b>${(s.a+t[s.n-1])*s.n/2}</b>。</p>`;},
     controls(s){return `<div class="wctl">首項：${[1,2,5].map(v=>`<button class="chip" data-act="a" data-v="${v}" aria-pressed="${s.a===v}">${v}</button>`).join('')}　公差：${[2,3,4].map(v=>`<button class="chip" data-act="d" data-v="${v}" aria-pressed="${s.d===v}">${v}</button>`).join('')}　項數：${[4,6,8,10].map(v=>`<button class="chip" data-act="n" data-v="${v}" aria-pressed="${s.n===v}">${v}</button>`).join('')}</div>`;},
     act(s,a,v){s[a]=+v;}},
@@ -705,7 +704,7 @@ MOD['G-tri']={
     render(s){const C=180-s.A-s.B;const toR=d=>d*Math.PI/180;const bx=60,by=170,cx=300,cy=170;const L=cx-bx;
       const ta=Math.tan(toR(s.B)),tb=Math.tan(toR(C));const L2=Math.min(L,150*(ta+tb)/(ta*tb));const cx2=bx+L2;const ax=bx+L2*tb/(ta+tb),ay=by-(ax-bx)*ta;
       return `<svg viewBox="0 0 440 190" class="wsvg"><polygon points="${bx},${by} ${cx2},${cy} ${ax},${ay}" fill="#cfe1f7" stroke="#333"/><line x1="${cx2}" y1="${cy}" x2="420" y2="${cy}" stroke="#333" stroke-dasharray="5 4"/>
-      <text x="${ax}" y="${ay+22}" font-size="13" text-anchor="middle">${s.A}°</text><text x="${bx+22}" y="${by-6}" font-size="13">${s.B}°</text><text x="${cx2-30}" y="${cy-6}" font-size="13">${C}°</text><text x="${cx2+30}" y="${cy-8}" font-size="14" fill="#d23c3c" font-weight="700">${180-C}°</text></svg>
+      <text x="${ax}" y="${ay+22}" font-size="16" text-anchor="middle">${s.A}°</text><text x="${bx+22}" y="${by-6}" font-size="16">${s.B}°</text><text x="${cx2-30}" y="${cy-6}" font-size="16">${C}°</text><text x="${cx2+30}" y="${cy-8}" font-size="17" fill="#d23c3c" font-weight="700">${180-C}°</text></svg>
       <p class="wmsg">紅色外角 = 180° − ${C}° = <b>${180-C}°</b>，剛好等於另外兩個內角相加：${s.A}° + ${s.B}° = ${s.A+s.B}°。</p>`;},
     controls(s){return `<div class="wctl">頂角：${[30,40,50,70].map(v=>`<button class="chip" data-act="A" data-v="${v}" aria-pressed="${s.A===v}">${v}°</button>`).join('')}　左下角：${[50,60,70].map(v=>`<button class="chip" data-act="B" data-v="${v}" aria-pressed="${s.B===v}">${v}°</button>`).join('')}</div>`;},
     act(s,a,v){s[a]=+v;}},
@@ -725,7 +724,7 @@ MOD['G-circle']={
   widget:{init:()=>({c:100}),printState:()=>({c:100}),
     render(s){const O=[150,110],R0=80,toR=d=>d*Math.PI/180;const a1=toR(90+s.c/2),a2=toR(90-s.c/2);const A=[O[0]+R0*Math.cos(a1),O[1]+R0*Math.sin(a1)],B=[O[0]+R0*Math.cos(a2),O[1]+R0*Math.sin(a2)],P=[O[0],O[1]-R0];
       return `<svg viewBox="0 0 440 210" class="wsvg"><circle cx="${O[0]}" cy="${O[1]}" r="${R0}" fill="none" stroke="#333"/><polyline points="${A} ${O} ${B}" fill="none" stroke="#4f8fd8" stroke-width="2.5"/><polyline points="${A} ${P} ${B}" fill="none" stroke="#d23c3c" stroke-width="2.5"/><circle cx="${O[0]}" cy="${O[1]}" r="3"/>
-      <text x="${O[0]+8}" y="${O[1]+4}" font-size="13" fill="#4f8fd8">${s.c}°</text><text x="${P[0]+6}" y="${P[1]+22}" font-size="13" fill="#d23c3c">${s.c/2}°</text><text x="260" y="60" font-size="14" fill="#4f8fd8">藍：圓心角 ${s.c}°</text><text x="260" y="84" font-size="14" fill="#d23c3c">紅：圓周角 ${s.c/2}°</text></svg>
+      <text x="${O[0]+8}" y="${O[1]+4}" font-size="16" fill="#4f8fd8">${s.c}°</text><text x="${P[0]+6}" y="${P[1]+22}" font-size="16" fill="#d23c3c">${s.c/2}°</text><text x="260" y="60" font-size="17" fill="#4f8fd8">藍：圓心角 ${s.c}°</text><text x="260" y="84" font-size="17" fill="#d23c3c">紅：圓周角 ${s.c/2}°</text></svg>
       <p class="wmsg">同一段弧（下方）：圓心角 ${s.c}°，圓周角只有一半 = <b>${s.c/2}°</b>。${s.c===180?'圓心角 180° 就是直徑，圓周角剛好 90°。':''}</p>`;},
     controls(s){return `<div class="wctl">圓心角：${[60,100,140,180].map(v=>`<button class="chip" data-act="c" data-v="${v}" aria-pressed="${s.c===v}">${v}°</button>`).join('')}</div>`;},
     act(s,a,v){s.c=+v;}},

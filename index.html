@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>我的數學學習路線</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1f4e8c">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="數學路線">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="style.css">
 <style>
@@ -31,6 +38,7 @@
 .tiers{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 2px}
 .stepl{font-size:18px;padding:6px 0}
 .big-ok{font-size:28px;font-weight:700;color:var(--ok)}
+.inst{margin-top:14px;background:var(--soft);border-radius:10px;padding:10px 12px;font-size:15px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .demo{background:color-mix(in srgb,var(--warn) 16%,transparent);border-radius:8px;padding:8px 12px;font-size:14px}
 </style>
 </head>
@@ -47,6 +55,20 @@ const L=window.Learn,$=s=>document.querySelector(s),app=$('#app');
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let S=null,me=null,prog={},cur=null,tick=0;
 const now=()=>Date.now();
+/* ---------- 加到手機桌面 ---------- */
+let deferredInstall=null;
+const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const UA=navigator.userAgent,isIOS=/iPhone|iPad|iPod/.test(UA)||(/Macintosh/.test(UA)&&'ontouchend' in document),inApp=/Line\/|FBAN|FBAV|Instagram/i.test(UA);
+function installHTML(){if(isStandalone())return'';
+  if(inApp)return`<div class="inst">你現在是在 LINE 裡面開啟的。請按右上角「⋯」→「用預設瀏覽器開啟」，才能把這個網頁加到手機桌面。</div>`;
+  if(deferredInstall)return`<div class="inst"><button class="btn p" id="instBtn">加到手機桌面</button><span>之後點桌面上的圖示就能直接進來。</span></div>`;
+  if(isIOS)return`<div class="inst">加到手機桌面：用 Safari 開啟，按下方的「分享」按鈕 →「加入主畫面」。</div>`;
+  return`<div class="inst">加到手機桌面：按瀏覽器右上角「⋮」→「加到主畫面」或「安裝應用程式」。</div>`;}
+function refreshInstall(){document.querySelectorAll('.instWrap').forEach(w=>{w.innerHTML=installHTML();});const b=document.getElementById('instBtn');
+  if(b)b.onclick=async()=>{const e=deferredInstall;if(!e)return;e.prompt();try{await e.userChoice;}catch{}deferredInstall=null;refreshInstall();};}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;refreshInstall();});
+window.addEventListener('appinstalled',()=>{deferredInstall=null;refreshInstall();});
+if('serviceWorker' in navigator&&window.isSecureContext)navigator.serviceWorker.register('sw.js').catch(()=>{});
 const preFor=m=>Object.keys(L.PRE).find(k=>L.PRE[k].includes(m));
 
 /* ---------- 登入 ---------- */
@@ -59,7 +81,8 @@ async function showLogin(msg=''){
     <div class="row" style="margin-top:8px">${Object.values(st).sort((a,b)=>a.seat-b.seat).map(x=>`<button class="btn" data-demo="${esc(x.seat)}">${esc(x.seat)} 號 ${esc(x.name)}</button>`).join('')}</div>`;}
   app.innerHTML=`<div class="card" style="max-width:460px;margin:30px auto 0"><h2>登入</h2><p class="mute">輸入座號和姓名，就能看到你自己的學習路線。</p>
    <div class="row"><label>座號 <input id="seat" inputmode="numeric" style="width:90px"></label><label>姓名 <input id="name" style="width:150px"></label></div>
-   <div class="row" style="margin-top:12px"><button class="btn p" id="go">進入</button><span class="mute" id="lm" role="status">${esc(msg)}</span></div>${demoBtns}</div>`;
+   <div class="row" style="margin-top:12px"><button class="btn p" id="go">進入</button><span class="mute" id="lm" role="status">${esc(msg)}</span></div>${demoBtns}<div class="instWrap"></div></div>`;
+  refreshInstall();
   $('#go').onclick=()=>login($('#seat').value,$('#name').value);
   $('#name').onkeydown=e=>{if(e.key==='Enter')login($('#seat').value,$('#name').value);};
   app.querySelectorAll('[data-demo]').forEach(b=>b.onclick=async()=>{const x=await S.getStudent(b.dataset.demo);login(x.seat,x.name);});
@@ -71,12 +94,12 @@ async function login(seat,name){
   try{const x=await S.getStudent(seat);
     if(!x||x.name!==name){$('#lm').textContent='找不到這位學生，請確認座號和姓名，或請老師幫你建立資料。';return;}
     me=x;prog=await S.getProgress(seat)||{};
-    try{sessionStorage.setItem('learn-me',JSON.stringify({seat,name}));}catch{}
+    try{localStorage.setItem('learn-me',JSON.stringify({seat,name}));}catch{}
     S.log(seat,{t:now(),k:'login'});
     $('#who').textContent=`${me.seat} 號 ${me.name}`;$('#out').hidden=false;showHome();
   }catch(e){$('#lm').textContent='連線失敗，請稍後再試（'+e.message+'）';}
 }
-$('#out').onclick=()=>{try{sessionStorage.removeItem('learn-me');}catch{}showLogin();};
+$('#out').onclick=()=>{try{localStorage.removeItem('learn-me');}catch{}showLogin();};
 
 /* ---------- 路線首頁 ---------- */
 function built(){return me.route.filter(m=>L.MOD[m]);}
@@ -91,7 +114,8 @@ function showHome(){
      return `<li class="${done?'done':m===nx?'now':''} ${!has?'off':''}"><span class="n">${done?'✓':i+1}</span>
       <div><b>${esc(c.name)}</b><div class="mute">${L.GN[c.grade]}${me.miss?.[m]?'・測驗第 '+me.miss[m].join('、')+' 題':preFor(m)?'・'+esc(L.CAT[preFor(m)].name)+'的預備觀念':''}</div></div>
       <div>${!has?'<span class="tag off">老師準備中</span>':open?`<button class="btn ${m===nx?'p':''}" data-m="${m}">${done?'複習':p?'繼續':'開始'}</button>`:'<span class="tag">完成上一關後解鎖</span>'}</div></li>`;}).join('')}</ol>
-   ${!nx&&built().length?'<div class="card"><span class="big-ok">目前的關卡都完成了！</span><p>老師會再幫你加上新的關卡。</p></div>':''}`;
+   ${!nx&&built().length?'<div class="card"><span class="big-ok">目前的關卡都完成了！</span><p>老師會再幫你加上新的關卡。</p></div>':''}<div class="instWrap"></div>`;
+  refreshInstall();
   app.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>openModule(b.dataset.m));
 }
 
@@ -177,7 +201,7 @@ function drawExit(){
 }
 
 (async()=>{S=await window.StoreReady;
-  let saved=null;try{saved=JSON.parse(sessionStorage.getItem('learn-me'));}catch{}
+  let saved=null;try{saved=JSON.parse(localStorage.getItem('learn-me'));}catch{}
   if(saved){await showLogin();login(saved.seat,saved.name);}else showLogin();
 })();
 }

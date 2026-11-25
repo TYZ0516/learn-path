@@ -38,3 +38,5 @@ input,textarea,select{font:inherit;font-size:16px;color:var(--ink);background:va
 @media(max-width:600px){.ladder{grid-template-columns:repeat(5,minmax(0,1fr))}.graphwrap{grid-template-columns:1fr}}
 
 .ptab{border-collapse:collapse;font-size:16px;background:#fff;color:#111}.ptab th,.ptab td{border:1px solid #c9d0db;padding:6px 12px;text-align:center}.ptab th{background:#eef3fb}
+@media(pointer:coarse){.chip{min-height:44px;padding:6px 14px}.btn{min-height:48px}}
+@media(max-width:600px){.card{padding:14px}.wsvg{border-radius:6px}}
