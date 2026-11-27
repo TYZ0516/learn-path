@@ -50,21 +50,23 @@ const Q2M={};CATALOG.forEach(c=>c.qs.forEach(q=>Q2M[q]=c.id));
 const PRE={'A-lin':['A-dist']};
 
 /* ---------- 起點判定（與判定系統相同的標準） ---------- */
-function diagnose(s){ // s：65 個字元，c 對、w 錯、i 不會、b 沒寫到（路線把 b 當作不會）
+function diagnose(s){ // s：65 個字元，c 對、w 錯、i 不會、b 沒寫到（路線：起點年級以內的 b 當作不會）
   const st=q=>s[q-1]||'b';
   const bands=BANDS.map(([a,b,p],g)=>{let c=0;for(let q=a;q<=b;q++)if(st(q)==='c')c++;return{g,c,n:b-a+1,pass:c>=p};});
   const f=bands.find(b=>!b.pass);const start=f?f.g:9;
   let last=0;for(let q=1;q<=65;q++)if(st(q)!=='b')last=q;
   return{start,startLabel:start>=9?'全部通過':GN[start],bands,last,correct:[...s].filter(x=>x==='c').length};
 }
-/* ---------- 路線：答錯、寫「不會」或沒寫到的題目，對應的關卡全部開放；由低年級排到高年級 ----------
-   不看起點年級（起點只用來顯示）。目錄 CATALOG 本身就是由低年級排到高年級，同年級照目錄順序，
-   所以整數除法一定排在小數除法前面，基礎缺口排在前面。 */
+/* ---------- 路線：答錯、寫「不會」的題目，對應的關卡全部開放；由低年級排到高年級 ----------
+   沒寫到的題目（2026/11/27 老師決定）：題目的年級在起點年級以內（≤ 起點）就開放；
+   高於起點的不開放（速度測驗沒寫到，不代表不會，而且起點以上本來就還沒學穩）。
+   目錄 CATALOG 本身就是由低年級排到高年級，同年級照目錄順序，所以整數除法一定排在小數除法前面。 */
 function route(s){
   const d=diagnose(s);const st=q=>s[q-1]||'b';
   const need=new Set(),miss={};
   for(let q=1;q<=65;q++){const x=st(q);
-    if(x==='w'||x==='i'||x==='b'){const m=Q2M[q];need.add(m);(miss[m]=miss[m]||[]).push(q);}}
+    const open=x==='w'||x==='i'||(x==='b'&&gradeOf(q)<=d.start);
+    if(open){const m=Q2M[q];need.add(m);(miss[m]=miss[m]||[]).push(q);}}
   const ord=m=>CATALOG.indexOf(CAT[m]);
   const ids=[...need].sort((a,b)=>CAT[a].grade-CAT[b].grade||ord(a)-ord(b));
   const out=[];ids.forEach(m=>{(PRE[m]||[]).forEach(p=>{if(!out.includes(p))out.push(p);});if(!out.includes(m))out.push(m);});
