@@ -15,7 +15,7 @@ table.t td:nth-child(2),table.t td:nth-child(3){white-space:nowrap}
 td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .mods{display:flex;gap:3px;flex-wrap:wrap}
 .mods span{font-size:12px;padding:2px 7px;border-radius:5px;background:var(--soft);white-space:nowrap}
-.mods .d{background:color-mix(in srgb,var(--ok) 30%,transparent)}.mods .l{background:color-mix(in srgb,var(--warn) 30%,transparent)}.mods .x{opacity:.45;text-decoration:line-through dotted}
+.mods .d{background:color-mix(in srgb,var(--ok) 30%,transparent)}.mods .l{background:color-mix(in srgb,var(--warn) 30%,transparent)}.mods .x{opacity:.45;text-decoration:line-through dotted}.mods .k{opacity:.5;border:1px dashed var(--line);background:none}
 .scroll{overflow-x:auto}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .kpi{background:var(--soft);border-radius:10px;padding:10px 14px}.kpi b{display:block;font-size:26px;line-height:1.2}
@@ -83,7 +83,10 @@ async function load(){
   render();
 }
 /* 路線 + 升級前測開放的關卡（progress/{座號}/_lvl.opened） */
-function fullRoute(seat){const st=students[seat],op=(progress[seat]||{})._lvl?.opened||[];return [...st.route,...op.filter(m=>!st.route.includes(m))];}
+function fullRoute(seat){const st=students[seat],pr=progress[seat]||{};const base=st.route.filter(m=>L.CAT[m].grade<=(st.start??0)||pr[m]);
+  const op=(pr._lvl?.opened||[]).filter(m=>!base.includes(m));return [...base,...op];}
+/* 測驗中起點以上年級的錯題：學生通過升級前測後才開放 */
+function laterRoute(seat){const all=fullRoute(seat);return students[seat].route.filter(m=>!all.includes(m));}
 function lvNote(seat,m){const lv=(progress[seat]||{})._lvl;return lv?.opened?.includes(m)?'升級前測開放'+(lv.wrong?.includes(m)?'（前測答錯）':''):'';}
 function stat(seat){const st=students[seat],pr=progress[seat]||{};const b=fullRoute(seat).filter(m=>L.MOD[m]);
   let n=0,c=0,time=0,last=0;Object.values(pr).forEach(p=>{(p.tiers||[]).forEach(t=>{n+=t.n||0;c+=t.c||0;});time+=p.time||0;last=Math.max(last,p.updatedAt||0);});
@@ -100,10 +103,10 @@ function render(){
    <div class="kpi"><span class="mute">全班練習答對率</span><b>${(()=>{const n=all.reduce((a,x)=>a+x.n,0),c=all.reduce((a,x)=>a+x.c,0);return n?Math.round(c/n*100)+'%':'—';})()}</b></div></div></div>
   <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">學生進度</h2>
    <div class="row"><button class="btn" id="rf">重新整理</button><button class="btn" id="pall" ${seats.length?'':'disabled'}>列印全部講義</button></div></div>
-   <div class="legend"><span><i style="background:color-mix(in srgb,var(--ok) 30%,transparent)"></i>已完成</span><span><i style="background:color-mix(in srgb,var(--warn) 30%,transparent)"></i>學習中</span><span><i style="background:var(--soft)"></i>還沒開始</span><span style="text-decoration:line-through dotted">老師準備中</span></div>
+   <div class="legend"><span><i style="background:color-mix(in srgb,var(--ok) 30%,transparent)"></i>已完成</span><span><i style="background:color-mix(in srgb,var(--warn) 30%,transparent)"></i>學習中</span><span><i style="background:var(--soft)"></i>還沒開始</span><span style="text-decoration:line-through dotted">老師準備中</span><span>🔒 通過升級前測後開放</span></div>
    ${seats.length?`<div class="scroll"><table class="t"><tr><th>座號</th><th>姓名</th><th>起點</th><th>學習路線</th><th>完成</th><th>練習答對率</th><th>學習時間</th><th>最後學習</th><th></th></tr>
    ${seats.map((s,i)=>{const st=students[s],x=all[i],pr=progress[s]||{};return `<tr><td class="n">${esc(s)}</td><td>${esc(st.name)}</td><td><b>${esc(st.startLabel)}</b></td>
-     <td><div class="mods">${fullRoute(s).map(m=>`<span class="${!L.MOD[m]?'x':pr[m]?.status==='done'?'d':pr[m]?'l':''}" title="${esc(L.CAT[m].name)}">${esc(L.CAT[m].name)}</span>`).join('')}</div></td>
+     <td><div class="mods">${fullRoute(s).map(m=>`<span class="${!L.MOD[m]?'x':pr[m]?.status==='done'?'d':pr[m]?'l':''}" title="${esc(L.CAT[m].name)}">${esc(L.CAT[m].name)}</span>`).join('')}${laterRoute(s).map(m=>`<span class="k" title="${esc(L.GN[L.CAT[m].grade])}升級前測後開放">🔒 ${esc(L.CAT[m].name)}</span>`).join('')}</div></td>
      <td class="n">${x.done}/${x.built.length}</td><td class="n">${x.acc===null?'—':Math.round(x.acc*100)+'%（'+x.c+'/'+x.n+'）'}</td><td class="n">${Math.round(x.time/60)} 分</td><td class="n">${fmtT(x.last)}</td>
      <td><div class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn" data-d="${esc(s)}">詳細</button><button class="btn" data-p="${esc(s)}">講義</button></div></td></tr>`;}).join('')}</table></div>`:'<p class="mute">還沒有學生。請在下面匯入判定系統的資料。</p>'}
   </div>
@@ -138,21 +141,21 @@ async function detail(seat){
    <h3>各關卡</h3><div class="scroll"><table class="t"><tr><th>關卡</th><th>測驗錯的題</th><th>狀態</th><th>基礎</th><th>進階</th><th>挑戰</th><th>出場券</th><th>時間</th></tr>
    ${fullRoute(seat).map(m=>{const p=pr[m];const t=i=>p?.tiers?.[i]?`${p.tiers[i].c}/${p.tiers[i].n}${p.tiers[i].passed?' ✓':''}`:'—';
      return `<tr><td>${esc(L.CAT[m].name)}</td><td>${st.miss?.[m]?st.miss[m].join('、'):preFor(m)?'預備觀念':lvNote(seat,m)}</td><td>${!L.MOD[m]?'<span class="tag off">準備中</span>':p?.status==='done'?'<span class="tag ok">完成</span>':p?'<span class="tag warn">學習中</span>':'未開始'}</td>
-     <td class="n">${t(0)}</td><td class="n">${t(1)}</td><td class="n">${t(2)}</td><td class="n">${p?`${p.exit?.tries||0} 次${p.exit?.passed?' ✓':''}`:'—'}</td><td class="n">${p?Math.round((p.time||0)/60)+' 分':'—'}</td></tr>`;}).join('')}</table></div>
+     <td class="n">${t(0)}</td><td class="n">${t(1)}</td><td class="n">${t(2)}</td><td class="n">${p?`${p.exit?.tries||0} 次${p.exit?.passed?' ✓':''}`:'—'}</td><td class="n">${p?Math.round((p.time||0)/60)+' 分':'—'}</td></tr>`;}).join('')}${laterRoute(seat).map(m=>`<tr style="opacity:.6"><td>🔒 ${esc(L.CAT[m].name)}</td><td>${st.miss?.[m]?st.miss[m].join('、'):''}</td><td><span class="tag">${L.GN[L.CAT[m].grade]}升級前測後開放</span></td><td></td><td></td><td></td><td></td><td></td></tr>`).join('')}</table></div>
    <h3>最近紀錄</h3>${logs.length?`<table class="t"><tr><th>時間</th><th>事件</th><th>關卡</th><th>內容</th></tr>${logs.map(e=>`<tr><td class="n">${fmtT(e.t)}</td><td>${label(e)}</td><td>${e.m?esc(L.CAT[e.m]?.name||e.m):''}</td><td class="mute">${e.k==='answer'?`${e.tier==='exit'?'出場券':e.tier==='lvl'?'升級前測':L.TIERS[e.tier]||''}：學生寫 ${esc(e.a)}，正解 ${esc(e.q)}`:e.k==='lvl'?`複習題 ${e.s1}/5、${L.GN[e.to]||''}題目 ${e.s2}/5`:''}</td></tr>`).join('')}</table>`:'<p class="mute">還沒有紀錄。</p>'}`;
   $('#dx').onclick=()=>{box.hidden=true;sel=null;};box.scrollIntoView({behavior:'smooth'});
 }
 
 /* ---------- 講義 ---------- */
 function packet(seat){
-  const st=students[seat];const mods=fullRoute(seat).filter(m=>L.MOD[m]);const later=fullRoute(seat).filter(m=>!L.MOD[m]);
+  const st=students[seat];const mods=fullRoute(seat).filter(m=>L.MOD[m]);const later=laterRoute(seat);
   const sd=(mi,t,i)=>(+seat)*10007+mi*101+t*13+i;
   let h=`<section class="pg"><h1>我的數學學習路線</h1><div class="sub">${esc(st.seat)} 號 ${esc(st.name)}</div>
    <h3>我的起點</h3><p style="font-size:15pt;margin:1mm 0"><b>${st.start>=9?'國中範圍全部通過':'從「'+esc(st.startLabel)+'」開始'}</b></p>
    <div class="ladder">${(st.bands||[]).map((b,g)=>`<div class="${b[2]?'lp':'lf'} ${g===st.start?'start':''}">${L.GN[g]}<br>${b[0]}/${b[1]}</div>`).join('')}</div>
    <p class="sub">綠色是測驗已經通過的年級，紅框是起點。</p>
    <h3>這份講義的關卡</h3><ol class="route">${mods.map(m=>`<li><b>${esc(L.CAT[m].name)}</b>（${L.GN[L.CAT[m].grade]}）— ${st.miss?.[m]?'測驗第 '+st.miss[m].join('、')+' 題':preFor(m)?esc(L.CAT[preFor(m)].name)+'的預備觀念':lvNote(seat,m)}</li>`).join('')}</ol>
-   ${later.length?`<h3>之後的關卡</h3><p>${later.map(m=>esc(L.CAT[m].name)).join('、')}</p>`:''}
+   ${later.length?`<h3>之後的關卡（通過升級前測後開放）</h3><p>${later.map(m=>esc(L.CAT[m].name)).join('、')}</p>`:''}
    <h3>怎麼使用</h3><ol><li>用手機打開學習路線，進入這一關，先看「觀念」和「例題」，動手試試看圖解。</li><li>看懂以後，寫講義上這一關的練習：分成基礎、進階、挑戰，每層 4 題。</li><li>最後寫出場券，寫完拿給老師看。</li></ol></section>`;
   mods.forEach((m,mi)=>{const c=L.CAT[m];
     const qs=[0,1,2].map(t=>[0,1,2,3].map(i=>L.makeQ(m,t,sd(mi,t,i))));const ex=[0,1,2].map(t=>L.makeQ(m,t,sd(mi,t,9)));

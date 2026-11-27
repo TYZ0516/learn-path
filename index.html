@@ -107,7 +107,11 @@ $('#out').onclick=()=>{try{localStorage.removeItem('learn-me');}catch{}showLogin
 const LV='_lvl';
 function lvState(){const v=prog[LV]=prog[LV]||{};if(v.level==null)v.level=me.start;v.opened=v.opened||[];v.wrong=v.wrong||[];v.tries=v.tries||[];return v;}
 function curLevel(){return prog[LV]?.level??me.start;}
-function routeAll(){const op=(prog[LV]?.opened||[]).filter(m=>!me.route.includes(m));return [...me.route,...op];}
+/* 目前開放的路線：原路線中年級 ≤ 目前年級的關卡（起點以上先鎖住；已經開始過的保留），再加上升級前測開放的關卡 */
+function routeAll(){if(PREVIEW)return me.route;const base=me.route.filter(m=>L.CAT[m].grade<=(me.start??0)||prog[m]); // 起點以上的節點由升級前測依序加入 opened
+  const op=(prog[LV]?.opened||[]).filter(m=>!base.includes(m));return [...base,...op];}
+/* 測驗中起點以上年級的錯題關卡：通過升級前測後才開放 */
+function laterRoute(){if(PREVIEW)return[];const all=routeAll();return me.route.filter(m=>!all.includes(m));}
 function built(){return routeAll().filter(m=>L.MOD[m]);}
 /* 起點以下的年級全部開放（可自由練習）；起點以上（含起點）依序解鎖 */
 const lowOpen=m=>L.CAT[m].grade<(me.start??0);
@@ -126,6 +130,8 @@ function showHome(){
       <div><b>${esc(c.name)}</b><div class="mute">${L.GN[c.grade]}${me.miss?.[m]?'・測驗第 '+me.miss[m].join('、')+' 題':preFor(m)?'・'+esc(L.CAT[preFor(m)].name)+'的預備觀念':prog[LV]?.opened?.includes(m)?'・升級前測開放'+(prog[LV].wrong?.includes(m)?'（前測答錯，先學這關）':''):''}</div></div>
       <div>${!has?'<span class="tag off">老師準備中</span>':open?`<button class="btn ${m===nx?'p':''}" data-m="${m}">${done?'複習':p?'繼續':'開始'}</button>`:'<span class="tag">完成上一關後解鎖</span>'}</div></li>`;}).join('')}</ol>
    ${!PREVIEW&&built().every(m=>prog[m]?.status==='done')?levelCard():''}
+   ${laterRoute().length?`<h3 style="margin-top:22px">之後的年級（通過升級前測後開放）</h3><p class="mute" style="margin:0 0 8px">測驗中這些年級也有錯的題目。先完成上面的關卡，再通過升級前測，就會一個年級一個年級開放。</p>
+   <ol class="path">${laterRoute().map(m=>{const c=L.CAT[m];return `<li class="off"><span class="n">🔒</span><div><b>${esc(c.name)}</b><div class="mute">${L.GN[c.grade]}${me.miss?.[m]?'・測驗第 '+me.miss[m].join('、')+' 題':''}</div></div><div><span class="tag">${L.GN[c.grade]}前測後開放</span></div></li>`;}).join('')}</ol>`:''}
    ${!PREVIEW&&extras().length?`<h3 style="margin-top:22px">更低年級的其他關卡（想複習就點開）</h3><p class="mute" style="margin:0 0 8px">這些不在你的路線上，但隨時可以練習。</p>
    <ol class="path">${extras().map(m=>{const c=L.CAT[m],p=prog[m],done=p?.status==='done';return `<li class="${done?'done':''}"><span class="n">${done?'✓':'・'}</span><div><b>${esc(c.name)}</b><div class="mute">${L.GN[c.grade]}</div></div><div><button class="btn" data-m="${m}">${done?'複習':p?'繼續':'練習'}</button></div></li>`;}).join('')}</ol>`:''}<div class="instWrap"></div>`;
   refreshInstall();
@@ -166,14 +172,15 @@ async function finishLevelTest(){const T=cur.lvl,lv=lvState();
   const wrong2=[...new Set(T.qs.slice(5).filter((x,i)=>!T.res[i+5]).map(x=>x.m))];
   const pass=s1>=4;let added=[];
   if(pass){const all=routeAll();const grade=L.CATALOG.filter(c=>c.grade===T.N&&L.MOD[c.id]).map(c=>c.id);
-    added=[...wrong2,...grade.filter(m=>!wrong2.includes(m))].filter(m=>!all.includes(m));
+    const nodes=me.route.filter(m=>L.CAT[m].grade===T.N); // 原本測驗答錯的節點
+    added=[...new Set([...wrong2,...nodes,...grade])].filter(m=>!all.includes(m));
     lv.opened.push(...added);lv.wrong=[...new Set([...lv.wrong,...wrong2.filter(m=>added.includes(m))])];lv.level=T.N;lv.review=[];}
   else lv.review=miss1;
   lv.tries.push({t:now(),to:T.N,s1,s2,pass});lv.updatedAt=now();
   await S.saveModule(me.seat,LV,lv).catch(()=>{});S.log(me.seat,{t:now(),k:'lvl',to:T.N,ok:pass,s1,s2});
   const G=L.GN[T.N];
   $('#qb').closest('.card').outerHTML=pass?`<div class="card"><span class="big-ok">通過！</span><p>複習題答對 ${s1} / 5，${G}題目答對 ${s2} / 5。</p>
-     ${added.length?`<p>開放了${G}的 ${added.length} 個關卡${wrong2.length?'，前測答錯的排在最前面':''}：</p><ol>${added.map(m=>`<li>${esc(L.CAT[m].name)}${wrong2.includes(m)?' <span class="tag warn">前測答錯</span>':''}</li>`).join('')}</ol>`:`<p>${G}的關卡你都已經完成了，可以直接挑戰下一個年級。</p>`}
+     ${added.length?`<p>開放了${G}的 ${added.length} 個關卡，前測答錯和測驗答錯的排在前面：</p><ol>${added.map(m=>`<li>${esc(L.CAT[m].name)}${wrong2.includes(m)?' <span class="tag warn">前測答錯</span>':me.miss?.[m]?' <span class="tag">測驗答錯</span>':''}</li>`).join('')}</ol>`:`<p>${G}的關卡你都已經完成了，可以直接挑戰下一個年級。</p>`}
      <div class="row"><button class="btn p" id="home">回到路線</button></div></div>`
    :`<div class="card"><h3 style="margin-top:0">複習題答對 ${s1} / 5（要 4 題）</h3><p>先把下面這些關卡再複習一次，準備好再挑戰（題目會換）。${G}題目答對 ${s2} / 5。</p>
      <div class="row">${miss1.map(m=>`<button class="btn" data-m="${m}">${esc(L.CAT[m].name)}</button>`).join('')}</div>
